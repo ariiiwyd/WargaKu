@@ -3,7 +3,8 @@ import { useDb, actorOf, type Actor } from '@/stores/db.store';
 import { useAuth } from '@/stores/auth.store';
 import type { Database, Household, Resident } from '@/types/models';
 
-export const useDatabase = () => useDb((s) => s.db);
+/** Data RT yang sudah dimuat. Hanya dipakai di dalam AppLayout, yang menunggu data siap sebelum merender halaman. */
+export const useDatabase = (): Database => useDb((s) => s.db)!;
 
 /** Akun yang sedang masuk (null bila belum login / dinonaktifkan). */
 export function useMe(): Actor | null {
@@ -35,6 +36,8 @@ export function useLookups() {
 }
 
 export function cashSummary(db: Database) {
+  // Peran tanpa akses buku kas (warga, pengurus) memakai ringkasan publik dari RPC.
+  if (!db.cash.length && db.publicCash) return db.publicCash;
   let income = 0, expense = 0;
   for (const t of db.cash) t.transaction_type === 'income' ? (income += t.amount) : (expense += t.amount);
   return { income, expense, balance: income - expense };

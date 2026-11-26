@@ -3,6 +3,7 @@ import { createBrowserRouter, Link } from 'react-router';
 import { Lock, MapPinOff } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { LoginPage } from '@/modules/auth/LoginPage';
+import { SetPasswordPage } from '@/modules/auth/SetPasswordPage';
 import { DashboardPage } from '@/modules/dashboard/DashboardPage';
 import { ResidentsPage } from '@/modules/residents/ResidentsPage';
 import { HouseholdsPage } from '@/modules/households/HouseholdsPage';
@@ -56,6 +57,7 @@ function NotFound() {
 
 export const router = createBrowserRouter([
   { path: '/masuk', element: <LoginPage /> },
+  { path: '/atur-sandi', element: <SetPasswordPage /> },
   {
     path: '/',
     element: <AppLayout />,

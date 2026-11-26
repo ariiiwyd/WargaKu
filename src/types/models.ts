@@ -142,8 +142,7 @@ export interface Payment {
   reference_code: string;
   amount: number;
   payment_method: PaymentMethod;
-  proof_name: string | null;
-  proof_data: string | null; // data URL (mode demo saja)
+  proof_path: string | null; // path di bucket privat payment-proofs
   payment_date: string;
   note: string;
   status: PaymentStatus;
@@ -352,6 +351,8 @@ export interface Database {
   guests: GuestLog[];
   audit: AuditLog[];
   counters: Counters;
+  /** Ringkasan kas publik (RPC public_cash_summary) untuk peran tanpa akses buku kas. */
+  publicCash: { income: number; expense: number; balance: number } | null;
 }
 
 export type Result<T = void> = { ok: true; data: T } | { ok: false; error: string };

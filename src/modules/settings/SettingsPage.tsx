@@ -1,16 +1,15 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Building2, Database, History, Monitor, Moon, Palette, RotateCcw, Smartphone, Sun, UserRound } from 'lucide-react';
+import { Building2, History, KeyRound, Monitor, Moon, Palette, RefreshCw, Smartphone, Sun, UserRound } from 'lucide-react';
 import { usePageEnter, useToast } from '@/motion';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, Button, Card, CardHeader, Choice, Field, Input } from '@/components/ui/primitives';
-import { ConfirmDialog } from '@/components/ui/DialogShell';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
 import { actions, useDb } from '@/stores/db.store';
 import { useUi } from '@/stores/ui.store';
 import { can, ROLE_LABEL } from '@/app/permissions';
 import { dateTime } from '@/lib/format';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { useAuth } from '@/stores/auth.store';
 import type { ThemePref } from '@/types/models';
 
 type TabKey = 'profil' | 'rt' | 'audit' | 'sistem';
@@ -43,12 +42,13 @@ function Profile() {
   const me = useMe()!;
   const toast = useToast();
   const p = db.profiles.find((x) => x.id === me.userId)!;
-  const [f, setF] = useState({ full_name: p.full_name, phone: p.phone, email: p.email });
+  const [f, setF] = useState({ full_name: p.full_name, phone: p.phone });
+  const authEmail = useAuth((s) => s.email);
   const theme = useUi((s) => s.theme);
   const setTheme = useUi((s) => s.setTheme);
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.updateProfile(f);
+    const r = await actions.updateProfile(f);
     toast(r.ok ? 'Profil disimpan' : r.error, r.ok ? 'success' : 'error');
   };
   return (
@@ -63,7 +63,7 @@ function Profile() {
           <Field label="Nama lengkap" required><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nomor HP"><Input type="tel" inputMode="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
-            <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+            <Field label="Email" hint="Email akun masuk; hubungi Ketua RT untuk mengubahnya"><Input type="email" value={authEmail ?? p.email} disabled /></Field>
           </div>
           <p className="text-[12.5px] text-muted">Kata sandi dikelola oleh Supabase Auth dan tidak disimpan di tabel profil.</p>
           <div className="flex justify-end"><Button type="submit">Simpan profil</Button></div>
@@ -85,9 +85,9 @@ function RtIdentity() {
   const toast = useToast();
   const [f, setF] = useState(db.neighborhood);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.updateNeighborhood(f);
+    const r = await actions.updateNeighborhood(f);
     toast(r.ok ? 'Identitas RT disimpan' : r.error, r.ok ? 'success' : 'error');
   };
   return (
@@ -137,8 +137,10 @@ function Audit() {
 
 function System() {
   const toast = useToast();
-  const reset = useDb((s) => s.reset);
-  const [confirm, setConfirm] = useState(false);
+  const email = useAuth((s) => s.email);
+  const sendReset = useAuth((s) => s.sendReset);
+  const load = useDb((s) => s.load);
+  const [busy, setBusy] = useState<'' | 'reset' | 'reload'>('');
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <Card data-card>
@@ -149,15 +151,26 @@ function System() {
         </div>
       </Card>
       <Card data-card>
-        <CardHeader title="Sumber data" icon={Database} />
+        <CardHeader title="Akun & keamanan" icon={KeyRound} />
         <div className="space-y-3 px-5 pb-5 text-[13.5px] text-ink-2">
-          <p>{isSupabaseConfigured ? 'Supabase terdeteksi di .env. Layanan data belum disambungkan ke tampilan; aplikasi masih memakai data demo.' : 'Mode demo: data contoh tersimpan di browser ini saja. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY untuk produksi.'}</p>
-          <Button variant="secondary" icon={RotateCcw} onClick={() => setConfirm(true)}>Kembalikan data demo</Button>
+          <p>Masuk sebagai <b className="text-ink">{email}</b>. Kata sandi dikelola Supabase Auth dan tidak pernah disimpan di tabel profil.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" icon={KeyRound} loading={busy === 'reset'} onClick={async () => {
+              if (!email) return;
+              setBusy('reset');
+              const err = await sendReset(email);
+              setBusy('');
+              toast(err ?? 'Tautan ganti kata sandi dikirim ke email Anda', err ? 'error' : 'success');
+            }}>Ganti kata sandi</Button>
+            <Button variant="ghost" icon={RefreshCw} loading={busy === 'reload'} onClick={async () => {
+              setBusy('reload');
+              await load({ silent: true });
+              setBusy('');
+              toast('Data diperbarui');
+            }}>Muat ulang data</Button>
+          </div>
         </div>
       </Card>
-      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} tone="red" icon={RotateCcw} title="Kembalikan data demo?" confirmLabel="Kembalikan"
-        message="Semua perubahan yang Anda buat di mode demo akan dihapus dari browser ini dan diganti data contoh awal."
-        onConfirm={() => { reset(); setConfirm(false); toast('Data demo dikembalikan'); }} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, NavLink, useLocation, useNavigate } from 'react-router';
 import {
   Bell, ChevronDown, CircleCheckBig, Ellipsis, LogOut, MapPin, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Sun, X, type LucideIcon,
 } from 'lucide-react';
 import { RouteTransition, Sheet, gsap, useSlidingPill, reducedMotion } from '@/motion';
-import { Avatar, Badge, IconButton, cx } from '@/components/ui/primitives';
+import { Avatar, Button, IconButton, Spinner, cx } from '@/components/ui/primitives';
 import { LogoMark, Wordmark } from '@/components/ui/Logo';
 import { Popover } from './Popover';
 import { navFor, bottomNavFor, type NavItem } from '@/app/navigation';
@@ -12,19 +12,84 @@ import { ROLE_LABEL, roleWithRt } from '@/app/permissions';
 import { useDatabase, useMe, unreadCount } from '@/hooks/useData';
 import { useAuth } from '@/stores/auth.store';
 import { useUi } from '@/stores/ui.store';
-import { actions } from '@/stores/db.store';
+import { actions, useDb } from '@/stores/db.store';
+import { supabase } from '@/lib/supabase';
 import { relative } from '@/lib/format';
 import type { ThemePref } from '@/types/models';
 
 const isActive = (to: string, path: string) => (to === '/' ? path === '/' : path === to || path.startsWith(to + '/'));
 
+/** Gerbang area masuk: tunggu sesi Supabase & data RT, lalu render aplikasi. */
 export function AppLayout() {
+  const auth = useAuth((s) => s.status);
+  const uid = useAuth((s) => s.userId);
+  const recovery = useAuth((s) => s.recovery);
+  const status = useDb((s) => s.status);
+  const error = useDb((s) => s.error);
+  const load = useDb((s) => s.load);
+  const clear = useDb((s) => s.clear);
+
+  useEffect(() => {
+    if (auth === 'signedIn' && uid) load();
+    if (auth === 'signedOut') clear();
+  }, [auth, uid, load, clear]);
+
+  // Data tetap segar: notifikasi realtime + muat ulang saat aplikasi kembali dibuka.
+  useEffect(() => {
+    if (auth !== 'signedIn' || !uid || !supabase) return;
+    const ch = supabase
+      .channel(`notif-${uid}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` }, () => load({ silent: true }))
+      .subscribe();
+    const onVisible = () => document.visibilityState === 'visible' && load({ silent: true });
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      supabase?.removeChannel(ch);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [auth, uid, load]);
+
+  if (recovery) return <Navigate to="/atur-sandi" replace />;
+  if (auth === 'unconfigured' || auth === 'signedOut') return <Navigate to="/masuk" replace />;
+  if (status === 'error') return <GateScreen title="Data tidak dapat dimuat" text={error ?? ''} retry={() => load()} />;
+  if (status === 'no-membership') return <GateScreen title="Akun belum terdaftar di RT" text={error ?? ''} />;
+  if (auth === 'loading' || status !== 'ready') return <GateScreen loading />;
+  return <Shell />;
+}
+
+function GateScreen({ loading, title, text, retry }: { loading?: boolean; title?: string; text?: string; retry?: () => void }) {
+  const signOut = useAuth((s) => s.signOut);
+  return (
+    <div className="grid min-h-dvh place-items-center bg-bg px-4">
+      <div className="flex max-w-sm flex-col items-center text-center">
+        <LogoMark className="size-14" />
+        {loading ? (
+          <>
+            <Spinner className="mt-6 size-6" />
+            <p className="mt-3 text-[14px] font-semibold text-muted">Memuat data RT…</p>
+          </>
+        ) : (
+          <>
+            <p className="mt-5 text-[18px] font-bold text-ink">{title}</p>
+            <p className="mt-1.5 text-[14px] text-muted">{text}</p>
+            <div className="mt-5 flex gap-2">
+              {retry ? <Button onClick={retry}>Coba lagi</Button> : null}
+              <Button variant="secondary" icon={LogOut} onClick={() => signOut()}>Keluar</Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Shell() {
   const me = useMe();
   const { pathname } = useLocation();
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const [moreOpen, setMoreOpen] = useState(false);
 
-  if (!me) return <Navigate to="/masuk" replace />;
+  if (!me) return <GateScreen title="Akun belum terdaftar di RT" text="Akun Anda belum ditautkan ke keanggotaan RT yang aktif. Hubungi Ketua RT." />;
   const nav = navFor(me.role);
 
   return (
@@ -135,7 +200,7 @@ function TopBar() {
   const me = useMe()!;
   const db = useDatabase();
   const nav = useNavigate();
-  const logout = useAuth((s) => s.logout);
+  const logout = useAuth((s) => s.signOut);
   const unread = unreadCount(db, me.userId);
   const notes = db.notifications.filter((n) => n.user_id === me.userId).slice(0, 6);
   const bell = useRef<HTMLSpanElement>(null);
@@ -167,9 +232,6 @@ function TopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-          <span className="mr-1 hidden md:inline">
-            <Badge tone="orange">Mode demo</Badge>
-          </span>
           <ThemeMenu />
           <Popover
             className="w-[min(360px,calc(100vw-24px))]"
@@ -360,7 +422,7 @@ function BottomNav({ pathname, onMore }: { pathname: string; onMore: () => void 
 function MoreMenu({ items, pathname, onClose }: { items: NavItem[]; pathname: string; onClose: () => void }) {
   const me = useMe()!;
   const nav = useNavigate();
-  const logout = useAuth((s) => s.logout);
+  const logout = useAuth((s) => s.signOut);
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-line px-5 py-4">

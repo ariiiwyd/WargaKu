@@ -9,6 +9,7 @@ import { SearchInput, Toolbar } from '@/components/ui/list';
 import { StatusBadge, ANNOUNCEMENT } from '@/components/ui/status';
 import { AnnIcon } from '@/modules/dashboard/DashboardPage';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
+import { useAct } from '@/hooks/useAct';
 import { actions } from '@/stores/db.store';
 import { can } from '@/app/permissions';
 import { dateTime, relative } from '@/lib/format';
@@ -25,6 +26,7 @@ export function AnnouncementsPage() {
   const me = useMe()!;
   const L = useLookups();
   const toast = useToast();
+  const act = useAct();
   const ref = useRef<HTMLDivElement>(null);
   const grid = useRef<HTMLUListElement>(null);
   usePageEnter(ref);
@@ -122,7 +124,7 @@ export function AnnouncementsPage() {
             </div>
             <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">
               {editor && (a.status === 'draft' || publisher) && a.status !== 'archived' ? <Button variant="secondary" icon={PencilLine} onClick={() => (setOpen(null), setEdit(a))}>Ubah</Button> : null}
-              {publisher && a.status === 'published' ? <Button variant="secondary" icon={Archive} onClick={() => { actions.archiveAnnouncement(a.id); toast('Pengumuman diarsipkan'); setOpen(null); }}>Arsipkan</Button> : null}
+              {publisher && a.status === 'published' ? <Button variant="secondary" icon={Archive} onClick={async () => { if (await act(actions.archiveAnnouncement(a.id), 'Pengumuman diarsipkan')) setOpen(null); }}>Arsipkan</Button> : null}
               {publisher && a.status === 'draft' ? <Button icon={Send} onClick={() => setPub(a)}>Publikasikan</Button> : null}
               {!publisher && a.status === 'draft' ? <p className="mr-auto self-center text-[12.5px] text-muted">Menunggu dipublikasikan Ketua RT/Sekretaris.</p> : null}
               <Button variant="ghost" onClick={() => setOpen(null)}>Tutup</Button>
@@ -134,7 +136,7 @@ export function AnnouncementsPage() {
       <Editor value={edit} onClose={() => setEdit(null)} />
       <ConfirmDialog open={!!pub} onClose={() => setPub(null)} icon={Send} tone="green" title="Publikasikan pengumuman?" confirmLabel="Publikasikan"
         message={<>“{pub?.title}” akan tampil untuk seluruh warga dan notifikasi dikirim ke <b>{totalMembers}</b> akun.</>}
-        onConfirm={() => { const r = actions.publishAnnouncement(pub!.id); toast(r.ok ? 'Pengumuman dipublikasikan & notifikasi terkirim' : r.error, r.ok ? 'success' : 'error'); setPub(null); setOpen(null); }} />
+        onConfirm={async () => { const r = await actions.publishAnnouncement(pub!.id); toast(r.ok ? 'Pengumuman dipublikasikan & notifikasi terkirim' : r.error, r.ok ? 'success' : 'error'); setPub(null); setOpen(null); }} />
     </div>
   );
 }
@@ -146,11 +148,14 @@ function Editor({ value, onClose }: { value: Partial<Announcement> | null; onClo
   const [f, setF] = useState<Partial<Announcement>>({});
   const [err, setErr] = useState('');
   useEffect(() => { if (value) (setF(value), setErr('')); }, [value]);
-  const submit = (e: FormEvent, publish = false) => {
+  const submit = async (e: FormEvent, publish = false) => {
     e.preventDefault();
-    const r = actions.saveAnnouncement(f as Announcement);
+    const r = await actions.saveAnnouncement(f as Announcement);
     if (!r.ok) return setErr(r.error);
-    if (publish) actions.publishAnnouncement(r.data.id);
+    if (publish) {
+      const pr = await actions.publishAnnouncement(r.data.id);
+      if (!pr.ok) return setErr(`Draft tersimpan, tetapi gagal dipublikasikan: ${pr.error}`);
+    }
     toast(publish ? 'Pengumuman dipublikasikan' : f.id ? 'Perubahan disimpan' : can(me.role, 'announcements.publish') ? 'Draft disimpan' : 'Draft dikirim ke Ketua RT/Sekretaris');
     onClose();
   };

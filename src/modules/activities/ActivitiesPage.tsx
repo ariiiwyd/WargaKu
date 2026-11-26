@@ -7,6 +7,7 @@ import { DialogShell } from '@/components/ui/DialogShell';
 import { Tabs } from '@/components/ui/Tabs';
 import { StatusBadge, ACTIVITY } from '@/components/ui/status';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
+import { useAct } from '@/hooks/useAct';
 import { actions } from '@/stores/db.store';
 import { can } from '@/app/permissions';
 import { DAYS, MONTHS, dateDay, jakartaParts, time } from '@/lib/format';
@@ -150,6 +151,7 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
   const me = useMe()!;
   const L = useLookups();
   const toast = useToast();
+  const act = useAct();
   const [shown, setShown] = useState<string | null>(null);
   if (id && id !== shown) setShown(id);
   const a = db.activities.find((x) => x.id === shown);
@@ -157,13 +159,16 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
   const parts = db.participants.filter((p) => p.activity_id === a?.id);
   const family = db.residents.filter((r) => r.household_id === me.householdId && r.is_active);
   const present = parts.filter((p) => p.attendance_status === 'present').length;
+  // RLS: warga hanya dapat membaca data keluarganya sendiri; peserta lain dihitung tanpa nama.
+  const named = parts.filter((p) => L.resident(p.resident_id));
+  const hidden = parts.length - named.length;
 
-  const toggle = (rid: string) => {
-    const r = actions.toggleJoin(a!.id, rid);
+  const toggle = async (rid: string) => {
+    const r = await actions.toggleJoin(a!.id, rid);
     if (!r.ok) return toast(r.error, 'error');
     toast(r.data ? `${L.resident(rid)?.full_name.split(' ')[0]} terdaftar sebagai peserta` : 'Pendaftaran dibatalkan');
   };
-  const mark = (rid: string, s: AttendanceStatus) => actions.setAttendance(a!.id, rid, s);
+  const mark = (rid: string, s: AttendanceStatus) => act(actions.setAttendance(a!.id, rid, s));
 
   return (
     <Sheet open={!!id} onClose={onClose} label="Detail kegiatan" wide>
@@ -200,7 +205,7 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
                 {a.status === 'done' ? <Badge tone="green">{present} hadir</Badge> : null}
               </div>
               <ul className="divide-y divide-line rounded-2xl border border-line">
-                {parts.map((p) => {
+                {named.map((p) => {
                   const r = L.resident(p.resident_id);
                   return (
                     <li key={p.resident_id} className="flex items-center gap-3 px-3.5 py-2.5">
@@ -216,14 +221,15 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
                     </li>
                   );
                 })}
+                {hidden > 0 ? <li className="px-4 py-3 text-[13px] text-muted">+{hidden} warga lain terdaftar</li> : null}
                 {!parts.length ? <li className="px-4 py-6 text-center text-[13px] text-muted">Belum ada peserta.</li> : null}
               </ul>
             </section>
           </div>
           {manage ? (
             <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">
-              {a.status === 'planned' ? <><Button variant="secondary" onClick={() => (actions.setActivityStatus(a.id, 'cancelled'), toast('Kegiatan dibatalkan'))}>Batalkan</Button><Button onClick={() => (actions.setActivityStatus(a.id, 'ongoing'), toast('Kegiatan dimulai, silakan catat kehadiran'))}>Mulai & catat kehadiran</Button></> : null}
-              {a.status === 'ongoing' ? <Button variant="success" onClick={() => (actions.setActivityStatus(a.id, 'done'), toast('Kegiatan ditandai selesai'))}>Tandai selesai</Button> : null}
+              {a.status === 'planned' ? <><Button variant="secondary" onClick={() => act(actions.setActivityStatus(a.id, 'cancelled'), 'Kegiatan dibatalkan')}>Batalkan</Button><Button onClick={() => act(actions.setActivityStatus(a.id, 'ongoing'), 'Kegiatan dimulai, silakan catat kehadiran')}>Mulai & catat kehadiran</Button></> : null}
+              {a.status === 'ongoing' ? <Button variant="success" onClick={() => act(actions.setActivityStatus(a.id, 'done'), 'Kegiatan ditandai selesai')}>Tandai selesai</Button> : null}
               <Button variant="ghost" onClick={onClose}>Tutup</Button>
             </div>
           ) : null}
@@ -239,10 +245,10 @@ function CreateForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [f, setF] = useState({ title: '', category: 'kerja_bakti' as Activity['category'], date: '', start: '07:00', end: '10:00', location: '', description: '' });
   const [err, setErr] = useState('');
   useEffect(() => { if (open) (setF({ title: '', category: 'kerja_bakti', date: '', start: '07:00', end: '10:00', location: '', description: '' }), setErr('')); }, [open]);
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!f.date) return setErr('Tanggal wajib diisi');
-    const r = actions.saveActivity({ title: f.title, category: f.category, location: f.location, description: f.description, start_at: new Date(`${f.date}T${f.start}:00+07:00`).toISOString(), end_at: f.end ? new Date(`${f.date}T${f.end}:00+07:00`).toISOString() : null });
+    const r = await actions.saveActivity({ title: f.title, category: f.category, location: f.location, description: f.description, start_at: new Date(`${f.date}T${f.start}:00+07:00`).toISOString(), end_at: f.end ? new Date(`${f.date}T${f.end}:00+07:00`).toISOString() : null });
     if (!r.ok) return setErr(r.error);
     toast('Kegiatan dibuat & warga diberi tahu');
     onClose();

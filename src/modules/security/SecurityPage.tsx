@@ -7,6 +7,7 @@ import { Avatar, Badge, Button, Card, CardHeader, Choice, EmptyState, Field, Inp
 import { DialogShell } from '@/components/ui/DialogShell';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
+import { useAct } from '@/hooks/useAct';
 import { actions } from '@/stores/db.store';
 import { can } from '@/app/permissions';
 import { DAYS, dateShort, dateTime, relative, time, todayISO } from '@/lib/format';
@@ -75,9 +76,9 @@ function Patrol() {
   const week = db.patrolSchedules.filter((s) => s.patrol_date >= today).slice(0, 7);
   const past = db.patrolSchedules.filter((s) => s.patrol_date < today).slice(-7).reverse();
   const id = useId();
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.submitPatrolReport(rep!, status, text);
+    const r = await actions.submitPatrolReport(rep!, status, text);
     if (!r.ok) return toast(r.error, 'error');
     toast('Laporan ronda tersimpan');
     setRep(null);
@@ -162,7 +163,7 @@ function Incidents() {
   const db = useDatabase();
   const me = useMe()!;
   const L = useLookups();
-  const toast = useToast();
+  const act = useAct();
   const sev = { rendah: 'gray', sedang: 'orange', tinggi: 'red' } as const;
   const st = { open: ['Terbuka', 'red'], handled: ['Ditangani', 'orange'], closed: ['Selesai', 'green'] } as const;
   const list = db.incidents.filter((i) => can(me.role, 'security.view') || i.reported_by === me.userId);
@@ -178,8 +179,8 @@ function Incidents() {
             <p className="mt-3 text-[12.5px] text-muted">{i.location} · {dateTime(i.incident_date)} · dilaporkan {L.userName(i.reported_by)}</p>
             {can(me.role, 'security.manage') && i.status !== 'closed' ? (
               <div className="mt-4 flex gap-2">
-                {i.status === 'open' ? <Button size="sm" variant="soft" onClick={() => (actions.setIncidentStatus(i.id, 'handled'), toast('Kejadian ditandai sedang ditangani'))}>Tandai ditangani</Button> : null}
-                <Button size="sm" variant="secondary" onClick={() => (actions.setIncidentStatus(i.id, 'closed'), toast('Kejadian ditutup'))}>Tutup kasus</Button>
+                {i.status === 'open' ? <Button size="sm" variant="soft" onClick={() => act(actions.setIncidentStatus(i.id, 'handled'), 'Kejadian ditandai sedang ditangani')}>Tandai ditangani</Button> : null}
+                <Button size="sm" variant="secondary" onClick={() => act(actions.setIncidentStatus(i.id, 'closed'), 'Kejadian ditutup')}>Tutup kasus</Button>
               </div>
             ) : null}
           </Card>
@@ -192,7 +193,7 @@ function Incidents() {
 function Guests() {
   const db = useDatabase();
   const me = useMe()!;
-  const toast = useToast();
+  const act = useAct();
   return (
     <Card data-card className="overflow-hidden">
       <ul className="divide-y divide-line">
@@ -204,7 +205,7 @@ function Guests() {
               <span className="block truncate text-[12.5px] text-muted">{g.purpose}{g.vehicle_plate ? <> · <Car className="inline size-3.5" /> {g.vehicle_plate}</> : null} · masuk {relative(g.arrival_at)}, {time(g.arrival_at)}</span>
             </span>
             {g.departure_at ? <Badge tone="gray">Keluar {time(g.departure_at)}</Badge> : (
-              <span className="flex items-center gap-2"><Badge tone="green" dot>Di dalam</Badge>{can(me.role, 'security.manage') ? <Button size="sm" variant="secondary" onClick={() => (actions.checkoutGuest(g.id), toast(`${g.visitor_name} tercatat keluar`))}>Catat keluar</Button> : null}</span>
+              <span className="flex items-center gap-2"><Badge tone="green" dot>Di dalam</Badge>{can(me.role, 'security.manage') ? <Button size="sm" variant="secondary" onClick={() => act(actions.checkoutGuest(g.id), `${g.visitor_name} tercatat keluar`)}>Catat keluar</Button> : null}</span>
             )}
           </li>
         ))}
@@ -221,9 +222,9 @@ function IncidentForm({ open, onClose }: { open: boolean; onClose: () => void })
   const [f, setF] = useState(blank);
   const [err, setErr] = useState('');
   useEffect(() => { if (open) (setF({ ...blank, when: new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 16) }), setErr('')); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.reportIncident({ title: f.title, description: f.description, location: f.location, severity: f.severity, incident_date: f.when ? new Date(f.when + ':00+07:00').toISOString() : '' });
+    const r = await actions.reportIncident({ title: f.title, description: f.description, location: f.location, severity: f.severity, incident_date: f.when ? new Date(f.when + ':00+07:00').toISOString() : '' });
     if (!r.ok) return setErr(r.error);
     toast('Kejadian dilaporkan ke Ketua RT & Pengurus');
     onClose();
@@ -256,9 +257,9 @@ function GuestForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [f, setF] = useState(blank);
   const [err, setErr] = useState('');
   useEffect(() => { if (open) (setF(blank), setErr('')); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.logGuest(f);
+    const r = await actions.logGuest(f);
     if (!r.ok) return setErr(r.error);
     toast(`${f.visitor_name} tercatat masuk`);
     onClose();

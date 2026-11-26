@@ -36,7 +36,7 @@ export function ConfirmDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (reason: string) => boolean | void;
+  onConfirm: (reason: string) => boolean | void | Promise<boolean | void>;
   title: string;
   message: ReactNode;
   confirmLabel: string;
@@ -49,13 +49,20 @@ export function ConfirmDialog({
   const id = useId();
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
-  const submit = (e: FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     if (reason === 'required' && !text.trim()) return setErr(`${reasonLabel} wajib diisi`);
-    const r = onConfirm(text);
-    if (r !== false) {
-      setText('');
-      setErr('');
+    setBusy(true);
+    try {
+      const r = await onConfirm(text);
+      if (r !== false) {
+        setText('');
+        setErr('');
+      }
+    } finally {
+      setBusy(false);
     }
   };
   return (
@@ -72,7 +79,7 @@ export function ConfirmDialog({
               <Button type="button" variant="secondary" onClick={onClose}>
                 Batal
               </Button>
-              <Button type="submit" variant={tone === 'red' ? 'danger' : tone === 'green' ? 'success' : 'primary'}>
+              <Button type="submit" loading={busy} variant={tone === 'red' ? 'danger' : tone === 'green' ? 'success' : 'primary'}>
                 {confirmLabel}
               </Button>
             </>

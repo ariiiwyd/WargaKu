@@ -195,9 +195,9 @@ function HouseholdForm({ value, onClose }: { value: Partial<Household> | null; o
   const [err, setErr] = useState('');
   if (value && (value.id ?? 'new') !== key) (setKey(value.id ?? 'new'), setF(value), setErr(''));
   if (!value && key) setKey(null);
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.saveHousehold(f as Household);
+    const r = await actions.saveHousehold(f as Household);
     if (!r.ok) return setErr(r.error);
     toast(f.id ? 'Data rumah diperbarui' : `Keluarga ${f.house_number} ditambahkan`);
     onClose();

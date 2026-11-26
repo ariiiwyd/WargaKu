@@ -3,7 +3,7 @@ import type { Role } from '@/types/models';
 /**
  * Matriks hak akses (PRD §2.1). Ini hanya untuk tampilan/menu di frontend —
  * penegakan sesungguhnya ada di RLS + RPC (supabase/migrations) dan di
- * aksi store demo yang memeriksa role yang sama.
+ * pemeriksaan role yang sama di src/stores/db.store.ts.
  */
 export type Action =
   | 'dashboard.admin'

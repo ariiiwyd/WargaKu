@@ -282,7 +282,7 @@ Sudut membulat yang ramah, konsisten bertingkat: kecil untuk kontrol, sedang unt
 
 ### Navigation
 - **Sidebar desktop:** navy, logo + wordmark (Warga putih, Ku biru muda) + slogan; item 44px, ikon 19px, label 14px semibold; aktif = pill biru meluncur (`useSlidingPill`); badge antrean oranye; kartu pengguna & tombol "Perkecil menu" di bawah.
-- **Top bar:** chip lokasi RT/RW, badge "Mode demo", menu tema, lonceng dengan popover (bergoyang saat dibuka), menu akun.
+- **Top bar:** chip lokasi RT/RW, menu tema, lonceng dengan popover (bergoyang saat dibuka), menu akun.
 - **Tab bar ponsel:** kartu melayang membulat 22px, 5 item 54px dengan ikon 21px + label 11px, pill Biru Embun meluncur.
 - **Tabs halaman:** rel abu bergaris, pill putih meluncur, penghitung bulat (biru saat aktif); bisa digulir horizontal di ponsel.
 

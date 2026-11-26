@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { CountUp, Meter, Modal, usePageEnter, useToast } from '@/motion';
 import { PageHeader, Magnetic } from '@/components/ui/PageHeader';
-import { Badge, Button, Card, CardHeader, Choice, EmptyState, Field, Info, Input, Select, Textarea, cx } from '@/components/ui/primitives';
+import { Badge, Button, Card, CardHeader, Choice, EmptyState, Field, Info, Input, Select, Skeleton, Textarea, cx } from '@/components/ui/primitives';
 import { ConfirmDialog, DialogShell } from '@/components/ui/DialogShell';
 import { Tabs } from '@/components/ui/Tabs';
 import { Pagination, SearchInput, Td, Th, Toolbar, useList } from '@/components/ui/list';
@@ -15,10 +15,13 @@ import { useChartColors } from '@/components/charts/useChartColors';
 import { actions } from '@/stores/db.store';
 import { can } from '@/app/permissions';
 import { dateShort, dateTime, jakartaParts, MONTHS, period, relative, rupiah, todayISO } from '@/lib/format';
-import { compressImage } from '@/lib/image';
-import type { Invoice, Payment, PaymentMethod } from '@/types/models';
+import { prepareProof, type PreparedFile } from '@/lib/image';
+import { signedUrl } from '@/lib/supabase';
+import type { Invoice, PaymentMethod } from '@/types/models';
 
 type TabKey = 'tagihan' | 'verifikasi' | 'kas' | 'jenis';
+/** Kategori yang terisi otomatis oleh sistem, tidak dipilih manual. */
+const AUTO_CATS = ['Iuran Warga', 'Saldo Awal'];
 
 export function DuesPage() {
   const me = useMe()!;
@@ -200,7 +203,7 @@ function InvoicesTab() {
       <PayModal invoice={pay} onClose={() => setPay(null)} cashOnly />
       <ConfirmDialog open={!!cancel} onClose={() => setCancel(null)} tone="red" icon={CircleX} title="Batalkan tagihan?" confirmLabel="Batalkan tagihan"
         message={<>Tagihan <b>{cancel?.invoice_number}</b> akan ditandai dibatalkan. Riwayatnya tetap tersimpan.</>}
-        onConfirm={() => { const r = actions.cancelInvoice(cancel!.id); toast(r.ok ? 'Tagihan dibatalkan' : r.error, r.ok ? 'success' : 'error'); if (r.ok) setCancel(null); return r.ok; }} />
+        onConfirm={async () => { const r = await actions.cancelInvoice(cancel!.id); toast(r.ok ? 'Tagihan dibatalkan' : r.error, r.ok ? 'success' : 'error'); if (r.ok) setCancel(null); return r.ok; }} />
     </>
   );
 }
@@ -222,9 +225,9 @@ function VerifyTab() {
   const hh = L.household(p?.household_id);
   const otherPending = inv ? db.payments.filter((x) => x.invoice_id === inv.id && x.status === 'pending' && x.id !== p?.id).reduce((s, x) => s + x.amount, 0) : 0;
 
-  const decide = (ok: boolean, reason = '') => {
+  const decide = async (ok: boolean, reason = '') => {
     if (!p) return false;
-    const r = ok ? actions.verifyPayment(p.id) : actions.rejectPayment(p.id, reason);
+    const r = ok ? await actions.verifyPayment(p.id) : await actions.rejectPayment(p.id, reason);
     if (!r.ok) { toast(r.error, 'error'); return false; }
     toast(ok ? `Pembayaran ${hh?.house_number} diverifikasi · kas bertambah ${rupiah(p.amount)}` : 'Pembayaran ditolak, warga diberi tahu');
     setConfirm(null);
@@ -273,10 +276,8 @@ function VerifyTab() {
           <CardHeader title={`Pembayaran ${hh?.house_number}`} sub={`${inv.invoice_number} · ${L.duesType(inv.dues_type_id)?.name} ${period(inv.period_month, inv.period_year)}`} icon={HandCoins} action={<StatusBadge map={PAYMENT} value={p.status} />} />
           <div className="grid flex-1 gap-5 px-5 pb-5 sm:grid-cols-[1fr_1.1fr]">
             <div className="overflow-hidden rounded-2xl border border-line bg-panel">
-              {p.proof_data?.startsWith('data:image') ? (
-                <a href={p.proof_data} target="_blank" rel="noreferrer"><img src={p.proof_data} alt="Bukti transfer" className="max-h-[340px] w-full object-contain" /></a>
-              ) : p.proof_name ? (
-                <ProofPlaceholder p={p} bank={db.neighborhood.bank_name} />
+              {p.proof_path ? (
+                <ProofView path={p.proof_path} />
               ) : (
                 <div className="grid h-full min-h-[200px] place-items-center p-6 text-center text-[13px] text-muted"><span><Banknote className="mx-auto mb-2 size-8 text-success" />Pembayaran tunai — tanpa bukti transfer.<br />{p.note}</span></div>
               )}
@@ -316,18 +317,32 @@ function VerifyTab() {
   );
 }
 
-function ProofPlaceholder({ p, bank }: { p: Payment; bank: string }) {
+/** Bukti transfer dari bucket privat lewat signed URL berumur pendek (60 dtk). */
+function ProofView({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+  const isPdf = path.toLowerCase().endsWith('.pdf');
+  useEffect(() => {
+    let alive = true;
+    setUrl(null);
+    setErr('');
+    signedUrl('payment-proofs', path, 60).then((u) => alive && setUrl(u)).catch(() => alive && setErr('Bukti tidak dapat dimuat.'));
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+  if (err) return <div className="grid h-full min-h-[200px] place-items-center p-6 text-center text-[13px] text-danger-ink">{err}</div>;
+  if (!url) return <Skeleton className="h-full min-h-[240px] rounded-none" />;
+  if (isPdf)
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className="grid h-full min-h-[200px] place-items-center p-6 text-center text-[13.5px] font-semibold text-primary">
+        <span><FileImage className="mx-auto mb-2 size-8" />Buka bukti transfer (PDF)</span>
+      </a>
+    );
   return (
-    <div className="flex h-full min-h-[240px] flex-col justify-between bg-[linear-gradient(160deg,var(--card),var(--panel))] p-5">
-      <div className="flex items-center justify-between text-[12px] text-muted"><span className="inline-flex items-center gap-1.5 font-semibold"><FileImage className="size-4" />{p.proof_name}</span><span>contoh</span></div>
-      <div className="text-center">
-        <Check className="mx-auto size-10 rounded-full bg-success p-2 text-white" />
-        <p className="mt-2 text-[13px] font-semibold text-muted">Transfer berhasil ke {bank}</p>
-        <p className="text-[24px] font-extrabold">{rupiah(p.amount)}</p>
-        <p className="font-mono text-[12px] text-muted">Ref {p.reference_code}</p>
-      </div>
-      <p className="text-center text-[11.5px] text-muted">Pratinjau bukti contoh (mode demo)</p>
-    </div>
+    <a href={url} target="_blank" rel="noreferrer" title="Buka ukuran penuh">
+      <img src={url} alt="Bukti transfer" className="max-h-[360px] w-full object-contain" />
+    </a>
   );
 }
 
@@ -382,7 +397,7 @@ function CashTab({ onAdd }: { onAdd: (t: 'income' | 'expense') => void }) {
       </Card>
       <ConfirmDialog open={!!rev} onClose={() => setRev(null)} icon={RotateCcw} tone="red" title="Buat transaksi pembalik?" confirmLabel="Buat koreksi" reason="required" reasonLabel="Alasan koreksi"
         message={<>Transaksi lama <b>{t?.transaction_number}</b> tidak dihapus. Sistem membuat transaksi {t?.transaction_type === 'income' ? 'pengeluaran' : 'pemasukan'} sebesar <b>{t ? rupiah(t.amount) : ''}</b> sebagai koreksi.</>}
-        onConfirm={(r) => { const res = actions.reverseCash(rev!, r); toast(res.ok ? 'Transaksi pembalik dicatat' : res.error, res.ok ? 'success' : 'error'); if (res.ok) setRev(null); return res.ok; }} />
+        onConfirm={async (r) => { const res = await actions.reverseCash(rev!, r); toast(res.ok ? 'Transaksi pembalik dicatat' : res.error, res.ok ? 'success' : 'error'); if (res.ok) setRev(null); return res.ok; }} />
     </>
   );
 }
@@ -393,10 +408,10 @@ function TypesTab() {
   const toast = useToast();
   const [edit, setEdit] = useState<{ id?: string; name: string; amount: string; billing_period: string; description: string; is_active: boolean } | null>(null);
   const id = useId();
-  const save = (e: FormEvent) => {
+  const save = async (e: FormEvent) => {
     e.preventDefault();
     if (!edit) return;
-    const r = actions.saveDuesType({ ...edit, amount: Number(edit.amount.replace(/\D/g, '')), billing_period: edit.billing_period as never });
+    const r = await actions.saveDuesType({ ...edit, amount: Number(edit.amount.replace(/\D/g, '')), billing_period: edit.billing_period as never });
     if (!r.ok) return toast(r.error, 'error');
     toast('Jenis iuran disimpan');
     setEdit(null);
@@ -467,9 +482,9 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
   const t = db.duesTypes.find((x) => x.id === type);
   const targets = db.households.filter((h) => h.status === 'active');
   const existing = targets.filter((h) => db.invoices.some((i) => i.household_id === h.id && i.dues_type_id === type && i.period_year === y && (i.period_month ?? 0) === (t?.billing_period === 'bulanan' ? m : 0) && i.status !== 'cancelled')).length;
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.generateInvoices({ dues_type_id: type, month: t?.billing_period === 'bulanan' ? m : null, year: y, due_date: due, household_ids: targets.map((h) => h.id) });
+    const r = await actions.generateInvoices({ dues_type_id: type, month: t?.billing_period === 'bulanan' ? m : null, year: y, due_date: due, household_ids: targets.map((h) => h.id) });
     if (!r.ok) return setErr(r.error);
     toast(`${r.data.created} tagihan dibuat${r.data.skipped ? `, ${r.data.skipped} dilewati (sudah ada)` : ''}`);
     onClose();
@@ -511,12 +526,12 @@ function CashModal({ type, onClose }: { type: null | 'income' | 'expense'; onClo
   const [f, setF] = useState({ category_id: '', amount: '', date: todayISO(), description: '' });
   const [err, setErr] = useState('');
   useEffect(() => {
-    if (type) (setF({ category_id: db.cashCategories.find((c) => c.transaction_type === type && c.id !== 'cc-iuran' && c.id !== 'cc-awal')?.id ?? '', amount: '', date: todayISO(), description: '' }), setErr(''));
+    if (type) (setF({ category_id: db.cashCategories.find((c) => c.transaction_type === type && !AUTO_CATS.includes(c.name))?.id ?? '', amount: '', date: todayISO(), description: '' }), setErr(''));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.recordCash({ type: type!, category_id: f.category_id, amount: Number(f.amount), date: f.date, description: f.description });
+    const r = await actions.recordCash({ type: type!, category_id: f.category_id, amount: Number(f.amount), date: f.date, description: f.description });
     if (!r.ok) return setErr(r.error);
     toast(`${type === 'expense' ? 'Pengeluaran' : 'Pemasukan'} ${rupiah(Number(f.amount))} dicatat`);
     onClose();
@@ -529,7 +544,7 @@ function CashModal({ type, onClose }: { type: null | 'income' | 'expense'; onClo
           <div className="space-y-4">
             <Field label="Kategori" required>
               <Select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })}>
-                {db.cashCategories.filter((c) => c.transaction_type === type && c.id !== 'cc-iuran' && c.id !== 'cc-awal').map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {db.cashCategories.filter((c) => c.transaction_type === type && !AUTO_CATS.includes(c.name)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -555,7 +570,7 @@ function PayModal({ invoice, onClose, cashOnly }: { invoice: Invoice | null; onC
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
-  const [proof, setProof] = useState<{ name: string; data: string } | null>(null);
+  const [proof, setProof] = useState<PreparedFile | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const pendingSum = invoice ? db.payments.filter((p) => p.invoice_id === invoice.id && p.status === 'pending').reduce((s, p) => s + p.amount, 0) : 0;
@@ -569,7 +584,7 @@ function PayModal({ invoice, onClose, cashOnly }: { invoice: Invoice | null; onC
     if (!f) return;
     setBusy(true);
     try {
-      setProof({ name: f.name, data: await compressImage(f) });
+      setProof(await prepareProof(f));
       setErr('');
     } catch (e) {
       setErr((e as Error).message);
@@ -577,9 +592,9 @@ function PayModal({ invoice, onClose, cashOnly }: { invoice: Invoice | null; onC
       setBusy(false);
     }
   };
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.submitPayment({ invoice_id: invoice!.id, amount: Number(amount), method, date, note, proof_name: proof?.name ?? null, proof_data: proof?.data ?? null });
+    const r = await actions.submitPayment({ invoice_id: invoice!.id, amount: Number(amount), method, date, note, proof: proof ? { blob: proof.blob, ext: proof.ext } : null });
     if (!r.ok) return setErr(r.error);
     toast('Pembayaran terkirim · menunggu verifikasi Bendahara');
     onClose();
@@ -609,7 +624,7 @@ function PayModal({ invoice, onClose, cashOnly }: { invoice: Invoice | null; onC
               {method === 'transfer' ? (
                 <Field label="Bukti transfer" required hint="JPG/PNG/WEBP atau PDF. Gambar diperkecil otomatis.">
                   <label className={cx('flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed p-4 transition-colors', proof ? 'border-success bg-success-soft/50' : 'border-line hover:border-primary')}>
-                    {proof?.data.startsWith('data:image') ? <img src={proof.data} alt="" className="size-14 rounded-lg object-cover" /> : <span className="grid size-14 place-items-center rounded-xl bg-primary-soft text-primary"><Upload className="size-6" /></span>}
+                    {proof?.preview ? <img src={proof.preview} alt="" className="size-14 rounded-lg object-cover" /> : <span className="grid size-14 place-items-center rounded-xl bg-primary-soft text-primary"><Upload className="size-6" /></span>}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] font-semibold">{proof ? proof.name : 'Pilih atau foto bukti transfer'}</span>
                       <span className="block text-[12.5px] text-muted">{proof ? 'Ketuk untuk mengganti' : 'Nama file tidak boleh memuat nomor rekening/NIK'}</span>

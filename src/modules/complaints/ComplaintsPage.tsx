@@ -97,14 +97,14 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
   const canHandle = c && (me.role === 'ketua_rt' || c.assigned_to === me.userId) && !['closed'].includes(c.status);
   useEffect(() => { if (c) setStatus(c.status === 'assigned' || c.status === 'submitted' ? 'in_progress' : c.status === 'in_progress' ? 'resolved' : 'closed'); }, [c?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const assign = () => {
-    const r = actions.assignComplaint(c!.id, assignee, msg);
+  const assign = async () => {
+    const r = await actions.assignComplaint(c!.id, assignee, msg);
     toast(r.ok ? 'Pengaduan ditugaskan' : r.error, r.ok ? 'success' : 'error');
     if (r.ok) setMsg('');
   };
-  const respond = (e: FormEvent) => {
+  const respond = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.updateComplaint(c!.id, status, msg);
+    const r = await actions.updateComplaint(c!.id, status, msg);
     toast(r.ok ? 'Tanggapan terkirim ke pelapor' : r.error, r.ok ? 'success' : 'error');
     if (r.ok) setMsg('');
   };
@@ -186,9 +186,9 @@ function CreateForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [f, setF] = useState({ category_id: '', title: '', description: '', location: '', priority: 'normal' as ComplaintPriority });
   const [err, setErr] = useState('');
   useEffect(() => { if (open) (setF({ category_id: '', title: '', description: '', location: '', priority: 'normal' }), setErr('')); }, [open]);
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.fileComplaint(f);
+    const r = await actions.fileComplaint(f);
     if (!r.ok) return setErr(r.error);
     toast(`Laporan ${r.data.ticket_number} terkirim ke Ketua RT`);
     onClose();

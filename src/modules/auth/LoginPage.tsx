@@ -1,15 +1,12 @@
-import { useRef, useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router';
-import { ArrowRight, BadgeCheck, HandHeart, ShieldCheck, Users, Zap } from 'lucide-react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Navigate } from 'react-router';
+import { BadgeCheck, CircleCheckBig, Eye, EyeOff, HandHeart, MailCheck, ShieldCheck, TriangleAlert, Users, Zap } from 'lucide-react';
 import { usePageEnter, SplitTitle } from '@/motion';
 import { LogoMark, Wordmark } from '@/components/ui/Logo';
 import { NeighborhoodScene } from '@/components/ui/Scene';
-import { Avatar, Button, Field, Input, cx } from '@/components/ui/primitives';
+import { Button, Field, Input } from '@/components/ui/primitives';
 import { ThemeMenu } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/stores/auth.store';
-import { useDatabase, useMe } from '@/hooks/useData';
-import { ROLE_DESC, ROLE_LABEL } from '@/app/permissions';
-import { isSupabaseConfigured } from '@/lib/supabase';
 
 const VALUES = [
   { icon: HandHeart, label: 'Rukun & Peduli' },
@@ -18,39 +15,12 @@ const VALUES = [
   { icon: Users, label: 'Bersama Lebih Baik' },
 ];
 
-export function LoginPage() {
-  const me = useMe();
-  const db = useDatabase();
-  const login = useAuth((s) => s.login);
-  const nav = useNavigate();
+/** Kerangka halaman autentikasi: panel brand (desktop) + kolom form. */
+export function AuthShell({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   usePageEnter(ref);
-
-  if (me) return <Navigate to="/" replace />;
-
-  const accounts = db.memberships
-    .map((m) => ({ m, p: db.profiles.find((p) => p.id === m.user_id)! }))
-    .sort((a, b) => ['ketua_rt', 'sekretaris', 'bendahara', 'pengurus', 'warga'].indexOf(a.m.role) - ['ketua_rt', 'sekretaris', 'bendahara', 'pengurus', 'warga'].indexOf(b.m.role));
-
-  const enter = (userId: string) => {
-    login(userId);
-    nav('/', { replace: true });
-  };
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const acc = accounts.find((a) => a.p.email.toLowerCase() === email.trim().toLowerCase());
-    if (!acc || password !== 'demo1234') return setError('Email atau kata sandi salah.');
-    if (!acc.m.is_active) return setError('Akun ini sudah dinonaktifkan. Hubungi Ketua RT.');
-    enter(acc.p.id);
-  };
-
   return (
     <div ref={ref} className="grid min-h-dvh bg-bg lg:grid-cols-[1.05fr_1fr]">
-      {/* Panel brand */}
       <section className="relative hidden overflow-hidden bg-[#1D4ED8] text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
         <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_0%_0%,#3B82F6_0%,#2563EB_40%,#1D4ED8_70%,#1E3A8A_100%)]" />
         <div className="relative flex items-center gap-3 px-12 pt-12">
@@ -77,7 +47,6 @@ export function LoginPage() {
         <NeighborhoodScene className="absolute inset-x-0 bottom-0 h-[150px] w-full" />
       </section>
 
-      {/* Form */}
       <section className="flex flex-col px-4 py-6 sm:px-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 lg:invisible">
@@ -86,65 +55,122 @@ export function LoginPage() {
           </div>
           <ThemeMenu />
         </div>
-
-        <div className="mx-auto my-auto w-full max-w-[460px] py-8">
-          <SplitTitle text="Masuk ke WargaKu" className="text-[30px] font-extrabold text-ink" />
-          <p data-fade className="mt-2 text-[15px] text-muted">
-            {db.neighborhood.name} · RT {db.neighborhood.rt_number} / RW {db.neighborhood.rw_number}, {db.neighborhood.village}
-          </p>
-
-          <div data-fade className="mt-6 rounded-2xl border border-warn/40 bg-warn-soft px-4 py-3 text-[13px] leading-relaxed text-warn-ink">
-            <b>Mode demo.</b> Data di aplikasi ini adalah contoh dan tersimpan di browser Anda.
-            {isSupabaseConfigured ? ' Supabase terdeteksi di .env, tetapi layanan data belum disambungkan ke tampilan.' : ' Pilih akun di bawah untuk mencoba tiap peran.'}
-          </div>
-
-          <p data-fade className="mt-7 mb-2.5 text-[13px] font-semibold text-ink-2">
-            Masuk cepat sebagai
-          </p>
-          <ul className="flex flex-col gap-2">
-            {accounts
-              .filter((a) => a.m.is_active)
-              .slice(0, 5)
-              .map(({ m, p }) => (
-                <li key={p.id} data-card>
-                  <button
-                    onClick={() => enter(p.id)}
-                    className="group card-lift flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-3.5 py-3 text-left shadow-sm hover:border-primary/50"
-                  >
-                    <Avatar name={p.full_name} size={40} />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate text-[14.5px] font-bold text-ink">{p.full_name}</span>
-                        <span className={cx('rounded-full px-2 py-0.5 text-[11px] font-bold', m.role === 'warga' ? 'bg-success-soft text-success-ink' : 'bg-primary-soft text-primary-soft-ink')}>
-                          {ROLE_LABEL[m.role]}
-                        </span>
-                      </span>
-                      <span className="block truncate text-[12.5px] text-muted">{ROLE_DESC[m.role]}</span>
-                    </span>
-                    <ArrowRight className="size-[18px] text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-                  </button>
-                </li>
-              ))}
-          </ul>
-
-          <div data-fade className="my-7 flex items-center gap-3 text-xs font-medium text-muted">
-            <span className="h-px flex-1 bg-line" /> atau dengan email <span className="h-px flex-1 bg-line" />
-          </div>
-
-          <form onSubmit={submit} className="flex flex-col gap-3.5" data-fade noValidate>
-            <Field label="Email" htmlFor="email">
-              <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} placeholder="nama@contoh.wargaku.id" aria-invalid={!!error} />
-            </Field>
-            <Field label="Kata sandi" htmlFor="pw" hint="Akun demo memakai kata sandi demo1234" error={error}>
-              <Input id="pw" type="password" autoComplete="current-password" value={password} onChange={(e) => (setPassword(e.target.value), setError(''))} aria-invalid={!!error} />
-            </Field>
-            <Button type="submit" size="lg" className="mt-1 w-full">
-              Masuk
-            </Button>
-          </form>
-        </div>
+        <div className="mx-auto my-auto w-full max-w-[420px] py-10">{children}</div>
         <p className="text-center text-xs text-muted">© {new Date().getFullYear()} WargaKu · Satu Aplikasi, Semua Urusan Warga.</p>
       </section>
     </div>
+  );
+}
+
+export function Notice({ tone, children }: { tone: 'warn' | 'success' | 'danger'; children: ReactNode }) {
+  const t = {
+    warn: ['border-warn/40 bg-warn-soft text-warn-ink', TriangleAlert],
+    success: ['border-success/40 bg-success-soft text-success-ink', CircleCheckBig],
+    danger: ['border-danger/30 bg-danger-soft text-danger-ink', TriangleAlert],
+  } as const;
+  const [cls, Icon] = t[tone];
+  return (
+    <div data-fade role={tone === 'danger' ? 'alert' : 'status'} className={`flex gap-2.5 rounded-2xl border px-4 py-3 text-[13.5px] leading-relaxed ${cls}`}>
+      <Icon className="mt-0.5 size-[18px] shrink-0" />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+export function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...props} type={show ? 'text' : 'password'} className="pr-12" />
+      <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'} className="absolute top-1/2 right-1.5 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-panel hover:text-ink">
+        {show ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      </button>
+    </div>
+  );
+}
+
+export function LoginPage() {
+  const status = useAuth((s) => s.status);
+  const recovery = useAuth((s) => s.recovery);
+  const signIn = useAuth((s) => s.signIn);
+  const sendReset = useAuth((s) => s.sendReset);
+  const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  if (recovery) return <Navigate to="/atur-sandi" replace />;
+  if (status === 'signedIn') return <Navigate to="/" replace />;
+  const unconfigured = status === 'unconfigured';
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return setError('Masukkan email Anda.');
+    if (mode === 'login' && !password) return setError('Masukkan kata sandi.');
+    setBusy(true);
+    const err = mode === 'login' ? await signIn(email, password) : await sendReset(email);
+    setBusy(false);
+    if (err) return setError(err);
+    if (mode === 'forgot') setMode('sent');
+  };
+
+  return (
+    <AuthShell>
+      {mode === 'sent' ? (
+        <>
+          <span data-fade className="grid size-14 place-items-center rounded-2xl bg-success-soft text-success-ink">
+            <MailCheck className="size-7" />
+          </span>
+          <SplitTitle text="Cek email Anda" className="mt-5 text-[30px] font-extrabold text-ink" />
+          <p data-fade className="mt-2 text-[15px] text-muted">
+            Jika <b className="text-ink">{email}</b> terdaftar, tautan untuk membuat kata sandi baru sudah dikirim. Buka tautan itu dari perangkat ini.
+          </p>
+          <Button variant="secondary" size="lg" className="mt-7 w-full" onClick={() => (setMode('login'), setPassword(''))}>
+            Kembali ke halaman masuk
+          </Button>
+        </>
+      ) : (
+        <>
+          <SplitTitle text={mode === 'login' ? 'Masuk ke WargaKu' : 'Lupa kata sandi'} className="text-[30px] font-extrabold text-ink" />
+          <p data-fade className="mt-2 text-[15px] text-muted">
+            {mode === 'login' ? 'Gunakan email dan kata sandi akun yang diberikan pengurus RT.' : 'Masukkan email akun Anda. Kami kirimkan tautan untuk membuat kata sandi baru.'}
+          </p>
+
+          {unconfigured ? (
+            <div className="mt-6">
+              <Notice tone="warn">
+                <b>Aplikasi belum terhubung ke server.</b> Pengelola perlu mengisi <code className="font-mono text-[12.5px]">VITE_SUPABASE_URL</code> dan{' '}
+                <code className="font-mono text-[12.5px]">VITE_SUPABASE_ANON_KEY</code>, lalu memasang ulang aplikasi.
+              </Notice>
+            </div>
+          ) : null}
+
+          <form onSubmit={submit} className="mt-7 flex flex-col gap-4" data-fade noValidate>
+            <Field label="Email" htmlFor="email">
+              <Input id="email" type="email" inputMode="email" autoComplete="username" autoFocus value={email} disabled={unconfigured}
+                onChange={(e) => (setEmail(e.target.value), setError(''))} placeholder="nama@email.com" aria-invalid={!!error} />
+            </Field>
+            {mode === 'login' ? (
+              <Field label="Kata sandi" htmlFor="pw">
+                <PasswordInput id="pw" autoComplete="current-password" value={password} disabled={unconfigured}
+                  onChange={(e) => (setPassword(e.target.value), setError(''))} aria-invalid={!!error} />
+              </Field>
+            ) : null}
+            {error ? <Notice tone="danger">{error}</Notice> : null}
+            <Button type="submit" size="lg" className="mt-1 w-full" loading={busy} disabled={unconfigured}>
+              {mode === 'login' ? 'Masuk' : 'Kirim tautan reset'}
+            </Button>
+            <button type="button" onClick={() => (setMode(mode === 'login' ? 'forgot' : 'login'), setError(''))} className="mx-auto text-[13.5px] font-semibold text-primary hover:underline">
+              {mode === 'login' ? 'Lupa kata sandi?' : 'Kembali ke halaman masuk'}
+            </button>
+          </form>
+
+          <p data-fade className="mt-8 rounded-2xl bg-panel px-4 py-3 text-center text-[13px] text-muted">
+            Belum punya akun? Hubungi Ketua RT — akun warga dibuat dan diundang oleh pengurus.
+          </p>
+        </>
+      )}
+    </AuthShell>
   );
 }

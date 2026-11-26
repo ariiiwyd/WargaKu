@@ -136,8 +136,8 @@ function LetterDetail({ id, onClose }: { id: string | null; onClose: () => void 
   const t = l ? L.letterType(l.letter_type_id) : undefined;
   const admin = can(me.role, 'letters.viewAll');
 
-  const act = (fn: () => { ok: boolean; error?: string }, msg: string) => {
-    const res = fn() as { ok: boolean; error?: string };
+  const act = async (fn: () => Promise<{ ok: boolean; error?: string }>, msg: string) => {
+    const res = await fn();
     if (!res.ok) {
       toast(res.error!, 'error');
       return false;
@@ -269,10 +269,10 @@ function FixForm({ letter, onDone }: { letter: LetterRequest; onDone: () => void
   const toast = useToast();
   const [purpose, setPurpose] = useState(letter.purpose);
   const [extra, setExtra] = useState(Object.entries(letter.form_data).map(([k, v]) => `${k}: ${v}`).join('\n'));
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const fd = Object.fromEntries(extra.split('\n').map((l) => l.split(':').map((s) => s.trim())).filter((p) => p[0] && p[1]).map(([k, ...v]) => [k!.toLowerCase().replace(/\s+/g, '_'), v.join(':')]));
-    const r = actions.resubmitLetter(letter.id, purpose, fd);
+    const r = await actions.resubmitLetter(letter.id, purpose, fd);
     if (!r.ok) return toast(r.error, 'error');
     toast('Permohonan dikirim ulang');
     onDone();
@@ -313,9 +313,9 @@ function RequestForm({ open, onClose }: { open: boolean; onClose: () => void }) 
   const pool = admin ? db.residents.filter((r) => r.is_active) : db.residents.filter((r) => r.household_id === me.householdId && r.is_active);
   const lt = db.letterTypes.find((t) => t.id === type);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.submitLetter({ letter_type_id: type, resident_id: resident, purpose, form_data: fd });
+    const r = await actions.submitLetter({ letter_type_id: type, resident_id: resident, purpose, form_data: fd });
     if (!r.ok) return setErr(r.error);
     toast(`Permohonan ${r.data.request_number} terkirim ke Sekretaris`);
     onClose();

@@ -10,7 +10,7 @@ web
 
 Pinned by PRD (`WargaKu_PRD_Technical_Specification.md` §1.1, §9): React + Vite + TypeScript, Tailwind CSS, Supabase (Postgres, Auth, Storage, RLS), PWA via vite-plugin-pwa, Vercel hosting. Motion via GSAP (user-requested skill `react-gsap-motion`).
 
-First build runs in **demo mode** (user decision, 26 Nov 2026): local seeded data in the browser so every flow is usable without a backend; the full Supabase migrations, RLS policies, and RPCs ship alongside, and the app switches to Supabase when `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are set.
+Production build (user decision, 26 Nov 2026): no demo mode. Login via Supabase Auth (email + password, invite-only accounts, reset via email); all modules read/write Supabase with RLS and SECURITY DEFINER RPCs; account invites go through the `invite-user` Edge Function. Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` the app shows a "not connected" notice on the login page.
 
 ## Users
 
@@ -52,7 +52,7 @@ Letters numbered `001/RT.001/XI/2026`; dues paid by bank transfer outside the ap
 
 - PRD: `WargaKu_PRD_Technical_Specification.md`.
 - Brand sheet image supplied in chat (not in repo).
-- No real resident data: all demo names, numbers and amounts are synthetic and must be labelled as demo data.
+- No real resident data in the repository. `supabase/seed.sql` holds only placeholder RT identity and master data that the RT replaces.
 
 ## Product Principles
 

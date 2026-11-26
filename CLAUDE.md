@@ -1,6 +1,6 @@
 # WargaKu — panduan kerja
 
-Aplikasi RT berbasis React + Vite + TypeScript + Tailwind v4 + Supabase (mode demo saat `.env` kosong).
+Aplikasi RT berbasis React + Vite + TypeScript + Tailwind v4 + Supabase. Versi production: login Supabase Auth, data langsung dari database (tanpa mode demo).
 
 ## Acuan wajib sebelum mengubah apa pun
 
@@ -13,7 +13,7 @@ Aplikasi RT berbasis React + Vite + TypeScript + Tailwind v4 + Supabase (mode de
 - Token warna lewat kelas Tailwind dari `src/styles/globals.css` (`bg-primary`, `text-muted`, `border-line`…), bukan hex.
 - Komponen dasar ada di `src/components/ui/` (`Button`, `Card`, `Badge`, `Tabs`, `Field`, `ConfirmDialog`, `StatusBadge`); `Sheet`, `Modal`, `useToast` di `src/motion/`.
 - Tiap halaman: `usePageEnter(ref)` + `PageHeader`, elemen ditandai `data-card` / `data-row` / `data-fade`.
-- Hak akses lewat `can(role, action)` di `src/app/permissions.ts`; aksi data di `src/stores/db.store.ts` (demo) meniru RPC di `supabase/migrations/`.
+- Hak akses lewat `can(role, action)` di `src/app/permissions.ts`; aksi data di `src/stores/db.store.ts` memanggil Supabase (insert/update ber-RLS atau RPC di `supabase/migrations/`); data dimuat oleh `src/services/loader.ts`. Perubahan aturan bisnis/akses dibuat sebagai migration baru, bukan mengubah migration lama.
 - Teks antarmuka dalam Bahasa Indonesia sederhana.
 
 ## Verifikasi

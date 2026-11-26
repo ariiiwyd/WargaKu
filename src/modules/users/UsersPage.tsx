@@ -65,10 +65,10 @@ export function UsersPage() {
       </div>
       <ConfirmDialog open={!!pending} onClose={() => setPending(null)} icon={UserCog} title="Ubah role pengguna?" confirmLabel="Ubah role"
         message={pending ? <><b>{L.userName(pending.user)}</b> akan menjadi <b>{ROLE_LABEL[pending.role]}</b>. {ROLE_DESC[pending.role]}. Perubahan dicatat di audit log.</> : null}
-        onConfirm={() => { const r = actions.assignRole(pending!.user, pending!.role); toast(r.ok ? 'Role diperbarui' : r.error, r.ok ? 'success' : 'error'); setPending(null); }} />
+        onConfirm={async () => { const r = await actions.assignRole(pending!.user, pending!.role); toast(r.ok ? 'Role diperbarui' : r.error, r.ok ? 'success' : 'error'); setPending(null); }} />
       <ConfirmDialog open={!!toggle} onClose={() => setToggle(null)} tone={toggle?.active ? 'green' : 'red'} title={toggle?.active ? 'Aktifkan kembali akun?' : 'Nonaktifkan akun?'} confirmLabel={toggle?.active ? 'Aktifkan' : 'Nonaktifkan'}
         message={toggle?.active ? 'Pengguna dapat masuk kembali dengan role sebelumnya.' : 'Pengguna tidak dapat masuk lagi. Data dan histori transaksinya tidak dihapus.'}
-        onConfirm={() => { const r = actions.setUserActive(toggle!.user, toggle!.active); toast(r.ok ? 'Status akun diperbarui' : r.error, r.ok ? 'success' : 'error'); setToggle(null); }} />
+        onConfirm={async () => { const r = await actions.setUserActive(toggle!.user, toggle!.active); toast(r.ok ? 'Status akun diperbarui' : r.error, r.ok ? 'success' : 'error'); setToggle(null); }} />
       <InviteForm open={invite} onClose={() => setInvite(false)} />
     </div>
   );
@@ -82,9 +82,9 @@ function InviteForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [err, setErr] = useState('');
   useEffect(() => { if (open) (setF({ resident: '', role: 'warga', email: '' }), setErr('')); }, [open]);
   const candidates = db.residents.filter((r) => r.is_active && !r.user_id && ['Kepala Keluarga', 'Istri', 'Suami'].includes(r.family_relationship));
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.createAccount(f.resident, f.role, f.email);
+    const r = await actions.createAccount(f.resident, f.role, f.email);
     if (!r.ok) return setErr(r.error);
     toast('Akun dibuat. Pada mode Supabase, undangan dikirim ke email warga.');
     onClose();

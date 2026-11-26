@@ -108,7 +108,7 @@ export async function generateLetterPdf(o: { letter: LetterRequest; type: Letter
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Diterbitkan melalui WargaKu · No. permohonan ${o.letter.request_number} · Dokumen contoh (mode demo)`, W / 2, 287, { align: 'center' });
+  doc.text(`Diterbitkan melalui WargaKu · No. permohonan ${o.letter.request_number} · Verifikasi keaslian ke pengurus RT`, W / 2, 287, { align: 'center' });
 
   doc.save(`${o.letter.letter_number!.replace(/\//g, '-')}_${o.type.code}.pdf`);
 }

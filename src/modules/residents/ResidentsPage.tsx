@@ -216,9 +216,9 @@ function ResidentForm({ value, onClose }: { value: Partial<Resident> | null; onC
   if (!value && lastId) setLastId(undefined);
 
   const set = (k: keyof Resident) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const r = actions.saveResident(form as Resident);
+    const r = await actions.saveResident(form as Resident);
     if (!r.ok) return setErr(r.error);
     toast(form.id ? 'Data warga diperbarui' : 'Warga baru ditambahkan');
     onClose();
@@ -342,8 +342,8 @@ function ResidentDetail({ resident, onClose, onEdit, reveal, manage }: { residen
                   {(['tetap', 'kontrak', 'pendatang', 'pindah', 'meninggal'] as ResidentStatus[]).map((s) => (
                     <button
                       key={s}
-                      onClick={() => {
-                        const res = actions.setResidentStatus(r.id, s);
+                      onClick={async () => {
+                        const res = await actions.setResidentStatus(r.id, s);
                         toast(res.ok ? `Status diubah menjadi ${RESIDENT[s][0]}` : res.error, res.ok ? 'success' : 'error');
                       }}
                       className={cx('h-8 rounded-full border px-3 text-[12.5px] font-semibold', r.resident_status === s ? 'border-primary bg-primary-soft text-primary-soft-ink' : 'border-line text-ink-2 hover:bg-panel')}
