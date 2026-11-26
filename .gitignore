@@ -69,3 +69,7 @@ desktop.ini
 .impeccable/review/
 .impeccable/build/
 .impeccable/live/
+
+.vercel
+.env*
+!.env.example
