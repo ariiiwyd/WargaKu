@@ -38,11 +38,11 @@ max_frequency = "1m0s"
 otp_length = 8
 
 # Email "Atur kata sandi" dipakai untuk akun baru (dari invite-user) dan Lupa kata sandi.
-# Template kustom hanya bisa dipasang setelah SMTP sendiri dikonfigurasi (batasan paket gratis).
-# Setelah SMTP aktif, hapus tanda komentar tiga baris di bawah lalu jalankan `supabase config push`.
-# [auth.email.template.recovery]
-# subject = "Atur kata sandi WargaKu"
-# content_path = "./supabase/templates/recovery.html"
+# Butuh SMTP sendiri (Brevo). SMTP diatur di dashboard Supabase — JANGAN tambahkan bagian
+# [auth.email.smtp] di sini tanpa password dari env, agar config push tidak menimpanya.
+[auth.email.template.recovery]
+subject = "Atur kata sandi WargaKu"
+content_path = "./supabase/templates/recovery.html"
 
 [storage]
 enabled = true
