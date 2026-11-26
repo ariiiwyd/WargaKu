@@ -264,7 +264,7 @@ Sudut membulat yang ramah, konsisten bertingkat: kecil untuk kontrol, sedang unt
 
 ### Chips / Badges
 - **Style:** pil 24px, label 11.5px semibold, latar soft + teks ink sesuai status, titik bulat opsional di kiri.
-- **Peta status tetap** (`components/ui/status.tsx`): Diajukan/Baru = biru, Menunggu TTD = ungu, Perlu perbaikan/Menunggu verifikasi/Sebagian = oranye, Disetujui/Lunas/Terverifikasi/Selesai = hijau, Ditolak/Belum bayar/Darurat = merah, Arsip/Dibatalkan = abu.
+- **Peta status tetap** (`components/ui/status.tsx`): Diajukan/Baru = biru, Menunggu TTD = ungu, Perlu perbaikan/Menunggu verifikasi/Sebagian = oranye, Disetujui/Lunas/Terverifikasi/Selesai = hijau, Ditolak/Belum bayar/Darurat = merah, Arsip/Dibatalkan = abu. Kehadiran kegiatan: Hadir = hijau, **Hadir online = biru**, Tidak hadir = merah, Terdaftar/Izin = abu. Lencana mode rapat **Online/Hybrid** memakai biru dengan ikon kamera (`Video`).
 
 ### Cards / Containers
 - **Corner Style:** 18px.
@@ -291,6 +291,12 @@ Gradasi biru (radial #3B82F6 → #2563EB → #1E40AF) membulat 24px, ilustrasi `
 
 ### Ubin Layanan Warga (signature)
 Grid 3 kolom ubin putih berisi ubin ikon Biru Embun 48px + label 12.5px; meniru layar beranda ponsel di brand sheet.
+
+### Kartu Rapat Berlangsung (signature)
+Pita biru (`primary`, membulat 20px, cahaya biru seperti banner kegiatan warga) yang muncul di atas beranda warga dan dashboard pengurus selama jendela gabung rapat online (15 menit sebelum mulai s.d. 30 menit setelah selesai, atau status berlangsung). Isi: ubin ikon `Radio` putih-transparan, titik hijau berdenyut (dimatikan saat "kurangi animasi"), label "Rapat sedang berlangsung", judul rapat, nama layanan (Google Meet/Zoom), dan tombol putih **Gabung sekarang** bertinta biru. Komponen: `components/meeting/LiveMeetingCard.tsx`.
+
+### Rapat online di detail kegiatan
+Kotak bergaris di atas deskripsi: abu saat belum dibuka (teks "Tombol gabung aktif 15 menit sebelum rapat"), berubah ke biru embun + ubin ikon biru saat bisa bergabung. Tombol utama "Gabung lewat Google Meet/Zoom" membuka tautan di tab baru langsung saat diklik, lalu mencatat "Hadir online". Notulen tampil sebagai panel abu muda (maks 65ch, `whitespace-pre-line`) dengan tombol biru "Tonton rekaman"; pengurus menulisnya lewat form + `ConfirmDialog` "Bagikan notulen ke warga?".
 
 ### Sheet & Modal
 Sheet masuk dari kanan (0,55 dtk) dengan isi `data-sheet-item` bertahap; Modal `<dialog>` naik 14px (0,35 dtk) dengan field `data-field` bertahap. Kerangka: kepala (ubin ikon + judul + sub + tombol tutup), isi bergulir, kaki abu tipis berisi tombol.

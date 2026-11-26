@@ -12,7 +12,8 @@ export type ComplaintStatus = 'submitted' | 'assigned' | 'in_progress' | 'resolv
 export type ComplaintPriority = 'rendah' | 'normal' | 'tinggi' | 'darurat';
 export type AnnouncementStatus = 'draft' | 'published' | 'archived';
 export type ActivityStatus = 'planned' | 'ongoing' | 'done' | 'cancelled';
-export type AttendanceStatus = 'registered' | 'present' | 'absent' | 'excused';
+export type AttendanceStatus = 'registered' | 'present' | 'present_online' | 'absent' | 'excused';
+export type MeetingMode = 'offline' | 'online' | 'hybrid';
 export type ThemePref = 'light' | 'dark' | 'system';
 
 export interface Neighborhood {
@@ -241,6 +242,12 @@ export interface Activity {
   status: ActivityStatus;
   created_by: string;
   created_at: string;
+  /** Rapat online lewat tautan Google Meet/Zoom */
+  meeting_mode: MeetingMode;
+  meeting_url: string | null;
+  recording_url: string | null;
+  minutes: string | null;
+  minutes_published_at: string | null;
 }
 
 export interface ActivityParticipant {

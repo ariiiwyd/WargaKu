@@ -1,4 +1,4 @@
-﻿# WargaKu
+# WargaKu
 
 **Satu Aplikasi, Semua Urusan Warga.** — Smart Neighborhood Management System untuk satu RT.
 
@@ -18,6 +18,7 @@ Stack: React + Vite + TypeScript + Tailwind CSS, Supabase (PostgreSQL, Auth, Sto
    | `supabase/migrations/20261126000400_storage.sql` | Bucket privat & policy Storage |
    | `supabase/migrations/20261126000500_production.sql` | Profil otomatis, nomor otomatis, notifikasi via trigger, validasi pembayaran, RPC tambahan |
    | `supabase/migrations/20261126000600_grants.sql` | Hak tabel eksplisit untuk Data API (project baru tidak memberi hak otomatis) |
+   | `supabase/migrations/20261127000700_online_meeting.sql` | Rapat online (tautan Google Meet/Zoom), absensi online, notulen & rekaman |
    | `supabase/seed.sql` | Identitas RT + data master (jenis surat, iuran, kategori kas & pengaduan) |
 
    Atau dengan Supabase CLI: `supabase link --project-ref <ref>` lalu `supabase db push`.

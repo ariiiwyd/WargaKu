@@ -15,6 +15,7 @@ import { useAuth } from './auth.store';
 import { friendlyError, sb } from '@/lib/supabase';
 import { loadDatabase, NoMembershipError } from '@/services/loader';
 import { rupiah } from '@/lib/format';
+import { meetingUrlError } from '@/lib/meeting';
 
 export type DbStatus = 'idle' | 'loading' | 'ready' | 'error' | 'no-membership';
 
@@ -361,9 +362,31 @@ export const actions = {
       required(input.start_at, 'Waktu mulai');
       required(input.location, 'Lokasi');
       if (input.end_at && input.end_at < input.start_at) throw new Error('Waktu selesai harus setelah waktu mulai');
-      const row = { title: input.title.trim(), category: input.category, location: input.location.trim(), description: blank(input.description), start_at: input.start_at, end_at: input.end_at ?? null };
+      const mode = input.meeting_mode ?? 'offline';
+      if (mode !== 'offline') {
+        const err = meetingUrlError(input.meeting_url ?? '');
+        if (err) throw new Error(err);
+      }
+      const row = {
+        title: input.title.trim(), category: input.category, location: input.location.trim(), description: blank(input.description),
+        start_at: input.start_at, end_at: input.end_at ?? null,
+        meeting_mode: mode, meeting_url: mode === 'offline' ? null : input.meeting_url!.trim(),
+      };
       if (input.id) await q(sb().from('activities').update(row).eq('id', input.id));
       else await q(sb().from('activities').insert({ ...row, neighborhood_id: nid, created_by: me.userId }));
+    }, 'activities.manage');
+  },
+  /** Catat kehadiran "Hadir online" (RPC join_online_meeting). Tautan dibuka oleh pemanggil. */
+  joinOnlineMeeting(activityId: string, residentId?: string) {
+    return run(() => rpc<string>('join_online_meeting', { p_activity_id: activityId, p_resident_id: residentId ?? null }));
+  },
+  /** Bagikan notulen & tautan rekaman ke seluruh warga. */
+  publishMinutes(activityId: string, minutes: string, recordingUrl: string) {
+    return run(async () => {
+      required(minutes, 'Notulen');
+      const rec = recordingUrl.trim();
+      if (rec && !/^https:\/\//i.test(rec)) throw new Error('Tautan rekaman harus diawali https://');
+      await rpc('publish_meeting_minutes', { p_activity_id: activityId, p_minutes: minutes.trim(), p_recording_url: rec || null });
     }, 'activities.manage');
   },
   setActivityStatus(id: string, status: Activity['status']) {

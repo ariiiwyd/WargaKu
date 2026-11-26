@@ -218,6 +218,9 @@ export async function loadDatabase(userId: string): Promise<Database> {
     activities: acts.map((a) => ({
       id: str(a.id), title: str(a.title), category: (str(a.category) || 'lainnya') as never, description: str(a.description), location: str(a.location),
       start_at: str(a.start_at), end_at: (a.end_at as string) ?? null, status: a.status as never, created_by: str(a.created_by), created_at: str(a.created_at),
+      meeting_mode: ((a.meeting_mode as string) ?? 'offline') as never, meeting_url: (a.meeting_url as string) ?? null,
+      recording_url: (a.recording_url as string) ?? null, minutes: (a.minutes as string) ?? null,
+      minutes_published_at: (a.minutes_published_at as string) ?? null,
     })),
     participants: parts.map((p) => ({ activity_id: str(p.activity_id), resident_id: str(p.resident_id), attendance_status: p.attendance_status as never, registered_at: str(p.registered_at) })),
     patrolTeams: teams.map((t): PatrolTeam => ({

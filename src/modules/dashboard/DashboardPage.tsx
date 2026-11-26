@@ -7,6 +7,7 @@ import {
 import { CountUp, Meter, SplitTitle, usePageEnter } from '@/motion';
 import { Badge, Card, CardHeader, cx } from '@/components/ui/primitives';
 import { NeighborhoodScene } from '@/components/ui/Scene';
+import { LiveMeetingCard } from '@/components/meeting/LiveMeetingCard';
 import { CashFlowChart, Legend } from '@/components/charts/CashFlowChart';
 import { useChartColors } from '@/components/charts/useChartColors';
 import { StatusBadge, REQUEST, COMPLAINT, INVOICE } from '@/components/ui/status';
@@ -74,6 +75,7 @@ function AdminDashboard({ me }: { me: Actor }) {
 
   return (
     <div ref={ref}>
+      <LiveMeetingCard />
       <Hero
         title={`${greeting()}, ${honorific(db, me)}`}
         sub={`${roleWithRt(me.role, db.neighborhood.rt_number)} · ${dateDay(new Date())}`}
@@ -273,6 +275,7 @@ function ResidentHome({ me }: { me: Actor }) {
 
   return (
     <div ref={ref} className="mx-auto max-w-[1100px]">
+      <LiveMeetingCard />
       <Hero
         title={`${greeting()}, ${honorific(db, me)}`}
         sub={`Rumah ${hh?.house_number} · ${family.length} anggota keluarga`}

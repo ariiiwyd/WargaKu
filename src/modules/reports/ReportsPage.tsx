@@ -37,7 +37,8 @@ export function ReportsPage() {
     const done = db.activities.filter((a) => a.status === 'done');
     const attendance = done.map((a) => {
       const p = db.participants.filter((x) => x.activity_id === a.id);
-      return { a, total: p.length, present: p.filter((x) => x.attendance_status === 'present').length };
+      const online = p.filter((x) => x.attendance_status === 'present_online').length;
+      return { a, total: p.length, online, present: p.filter((x) => x.attendance_status === 'present').length + online };
     });
     return {
       active, ages, statuses, letters, byCat, income, expense,
@@ -57,7 +58,7 @@ export function ReportsPage() {
       ] },
       { name: 'Rekap Surat', rows: db.letters.map((l) => ({ 'No. permohonan': l.request_number, 'No. surat': l.letter_number ?? '', Jenis: L.letterType(l.letter_type_id)?.name, Status: REQUEST[l.status][0], Diajukan: dateShort(l.created_at) })) },
       { name: 'Rekap Pengaduan', rows: db.complaints.map((x) => ({ Tiket: x.ticket_number, Judul: x.title, Kategori: L.complaintCategory(x.category_id)?.name, Prioritas: x.priority, Status: COMPLAINT[x.status][0], Dilaporkan: dateShort(x.created_at) })) },
-      { name: 'Rekap Kegiatan', rows: db.activities.map((a) => ({ Kegiatan: a.title, Tanggal: dateShort(a.start_at), Lokasi: a.location, Peserta: db.participants.filter((p) => p.activity_id === a.id).length, Hadir: db.participants.filter((p) => p.activity_id === a.id && p.attendance_status === 'present').length })) },
+      { name: 'Rekap Kegiatan', rows: db.activities.map((a) => ({ Kegiatan: a.title, Tanggal: dateShort(a.start_at), Lokasi: a.location, Peserta: db.participants.filter((p) => p.activity_id === a.id).length, Mode: a.meeting_mode === 'offline' ? 'Tatap muka' : a.meeting_mode === 'online' ? 'Online' : 'Hybrid', Hadir: db.participants.filter((p) => p.activity_id === a.id && p.attendance_status === 'present').length, 'Hadir online': db.participants.filter((p) => p.activity_id === a.id && p.attendance_status === 'present_online').length, Notulen: a.minutes_published_at ? 'Ada' : '-' })) },
     ];
     if (can(me.role, 'security.view')) sheets.push({ name: 'Rekap Keamanan', rows: db.patrolReports.map((p) => { const s = db.patrolSchedules.find((x) => x.id === p.schedule_id); return { Tanggal: s?.patrol_date, Regu: db.patrolTeams.find((t) => t.id === s?.team_id)?.name, Status: p.status, Catatan: p.report }; }) });
     if (fin) {
@@ -170,9 +171,9 @@ export function ReportsPage() {
         <Card data-card>
           <CardHeader title="Kehadiran kegiatan" icon={CalendarDays} />
           <ul className="space-y-3 px-5 pb-5">
-            {r.attendance.map(({ a, total, present }) => (
+            {r.attendance.map(({ a, total, present, online }) => (
               <li key={a.id}>
-                <div className="mb-1 flex justify-between text-[13px]"><span className="truncate text-ink-2">{a.title}</span><b>{present}/{total}</b></div>
+                <div className="mb-1 flex justify-between text-[13px]"><span className="truncate text-ink-2">{a.title}</span><b>{present}/{total}{online ? <span className="font-semibold text-primary"> · {online} online</span> : null}</b></div>
                 <Meter value={total ? present / total : 0} className="h-1.5 bg-panel-2" color={c.success} label={a.title} />
               </li>
             ))}
