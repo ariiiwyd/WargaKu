@@ -62,3 +62,7 @@ supabase/       migrations, seed.sql, config.toml
 ## Ikon PWA
 
 `npm run icons` membuat ulang PNG di `public/icons/` dari `public/favicon.svg`.
+
+## Lisensi
+
+[MIT](LICENSE) © 2026 ariiiwyd

@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "license": "MIT",
+  "author": "ariiiwyd",
   "description": "WargaKu — Satu Aplikasi, Semua Urusan Warga. Smart Neighborhood Management System untuk satu RT.",
   "scripts": {
     "dev": "vite",
