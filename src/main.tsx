@@ -6,10 +6,12 @@ import { router } from '@/app/router';
 import { ToastProvider } from '@/motion';
 import { applyTheme, useUi } from '@/stores/ui.store';
 import { useAuth } from '@/stores/auth.store';
+import { initInstallListeners } from '@/stores/install.store';
 import '@/styles/globals.css';
 
 applyTheme(useUi.getState().theme);
 useAuth.getState().init();
+initInstallListeners();
 registerSW({ immediate: true });
 
 createRoot(document.getElementById('root')!).render(

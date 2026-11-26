@@ -8,6 +8,7 @@ import { CountUp, Meter, SplitTitle, usePageEnter } from '@/motion';
 import { Badge, Card, CardHeader, cx } from '@/components/ui/primitives';
 import { NeighborhoodScene } from '@/components/ui/Scene';
 import { LiveMeetingCard } from '@/components/meeting/LiveMeetingCard';
+import { InstallCard } from '@/components/install/InstallApp';
 import { CashFlowChart, Legend } from '@/components/charts/CashFlowChart';
 import { useChartColors } from '@/components/charts/useChartColors';
 import { StatusBadge, REQUEST, COMPLAINT, INVOICE } from '@/components/ui/status';
@@ -281,6 +282,7 @@ function ResidentHome({ me }: { me: Actor }) {
         sub={`Rumah ${hh?.house_number} · ${family.length} anggota keluarga`}
         chips={[pending.length ? `${pending.length} pembayaran sedang diverifikasi` : '', `RT ${db.neighborhood.rt_number} / RW ${db.neighborhood.rw_number} ${db.neighborhood.name}`]}
       />
+      <InstallCard className="mt-5" />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.1fr]">
         {/* Tagihan */}

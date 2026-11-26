@@ -10,6 +10,7 @@ import { useUi } from '@/stores/ui.store';
 import { can, ROLE_LABEL } from '@/app/permissions';
 import { dateTime } from '@/lib/format';
 import { useAuth } from '@/stores/auth.store';
+import { InstallButton } from '@/components/install/InstallApp';
 import type { ThemePref } from '@/types/models';
 
 type TabKey = 'profil' | 'rt' | 'audit' | 'sistem';
@@ -146,7 +147,8 @@ function System() {
       <Card data-card>
         <CardHeader title="Pasang di layar utama" icon={Smartphone} />
         <div className="space-y-2 px-5 pb-5 text-[13.5px] leading-relaxed text-ink-2">
-          <p>WargaKu adalah Progressive Web App. Di Android (Chrome), buka menu ⋮ lalu pilih <b>Instal aplikasi</b>. Di iPhone (Safari), ketuk <b>Bagikan → Tambah ke Layar Utama</b>.</p>
+          <p>Pasang WargaKu di layar utama supaya bisa dibuka seperti aplikasi. Bila tombol di bawah tidak memunculkan dialog, WargaKu akan menampilkan langkah sesuai HP Anda.</p>
+          <InstallButton />
           <p className="text-muted">Data keuangan dan dokumen pribadi tidak disimpan untuk offline. Pembayaran dan verifikasi memerlukan koneksi internet.</p>
         </div>
       </Card>

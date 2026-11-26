@@ -7,6 +7,7 @@ import { RouteTransition, Sheet, gsap, useSlidingPill, reducedMotion } from '@/m
 import { Avatar, Button, IconButton, Spinner, cx } from '@/components/ui/primitives';
 import { LogoMark, Wordmark } from '@/components/ui/Logo';
 import { Popover } from './Popover';
+import { InstallButton, InstallIconButton } from '@/components/install/InstallApp';
 import { navFor, bottomNavFor, type NavItem } from '@/app/navigation';
 import { ROLE_LABEL, roleWithRt } from '@/app/permissions';
 import { useDatabase, useMe, unreadCount } from '@/hooks/useData';
@@ -232,6 +233,7 @@ function TopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+          <InstallIconButton />
           <ThemeMenu />
           <Popover
             className="w-[min(360px,calc(100vw-24px))]"
@@ -455,6 +457,7 @@ function MoreMenu({ items, pathname, onClose }: { items: NavItem[]; pathname: st
         })}
       </div>
       <div className="border-t border-line p-4">
+        <InstallButton className="mb-3 w-full" />
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-ink-2">Tema</span>
           <ThemeMenu />

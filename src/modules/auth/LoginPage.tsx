@@ -7,6 +7,7 @@ import { NeighborhoodScene } from '@/components/ui/Scene';
 import { Button, Field, Input } from '@/components/ui/primitives';
 import { ThemeMenu } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/stores/auth.store';
+import { InstallCard } from '@/components/install/InstallApp';
 
 const VALUES = [
   { icon: HandHeart, label: 'Rukun & Peduli' },
@@ -169,6 +170,9 @@ export function LoginPage() {
           <p data-fade className="mt-8 rounded-2xl bg-panel px-4 py-3 text-center text-[13px] text-muted">
             Belum punya akun? Hubungi Ketua RT — akun warga dibuat dan diundang oleh pengurus.
           </p>
+          <div data-fade className="mt-4">
+            <InstallCard />
+          </div>
         </>
       )}
     </AuthShell>
