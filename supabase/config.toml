@@ -1,4 +1,6 @@
-# Supabase CLI config untuk WargaKu (pengembangan lokal: `supabase start`)
+# Supabase CLI config untuk WargaKu.
+# Bagian [auth] dikirim ke project dengan `supabase config push`.
+# Setelah deploy ke Vercel, ganti site_url dan tambahkan URL produksi ke additional_redirect_urls.
 project_id = "wargaku"
 
 [api]
@@ -9,7 +11,7 @@ max_rows = 1000
 
 [db]
 port = 54322
-major_version = 15
+major_version = 17
 
 [db.seed]
 enabled = true
@@ -18,15 +20,26 @@ sql_paths = ["./seed.sql"]
 [auth]
 enabled = true
 site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173"]
+additional_redirect_urls = ["http://localhost:5173/atur-sandi"]
 jwt_expiry = 3600
-enable_signup = false   # akun warga dibuat/diundang oleh pengurus
+# Akun hanya dibuat lewat undangan pengurus (Edge Function invite-user).
+enable_signup = false
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
 
 [auth.email]
+# true = penyedia login email aktif. Pendaftaran mandiri tetap mati lewat [auth] enable_signup = false.
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
 
 [storage]
 enabled = true
 file_size_limit = "10MiB"
+
+[storage.vector]
+enabled = false

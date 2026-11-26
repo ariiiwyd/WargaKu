@@ -5,7 +5,9 @@
 -- berbeda tidak bisa saling terhubung (PRD §6.4).
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+-- Supabase memasang ekstensi di skema "extensions"; panggil fungsinya dengan nama skema.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------- Enums ----------------------------------------------------
 create type public.app_role as enum ('ketua_rt','sekretaris','bendahara','pengurus','warga');
@@ -253,7 +255,7 @@ create table public.dues_payments (
   invoice_id uuid not null,
   household_id uuid not null,
   payer_user_id uuid not null references public.profiles(id) default auth.uid(),
-  reference_code varchar(60) not null default encode(gen_random_bytes(8), 'hex'),
+  reference_code varchar(60) not null default encode(extensions.gen_random_bytes(8), 'hex'),
   amount numeric(14,2) not null check (amount > 0),
   payment_method public.payment_method not null,
   proof_path text,
