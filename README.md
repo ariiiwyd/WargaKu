@@ -49,7 +49,9 @@ supabase functions deploy invite-user
 supabase secrets set SITE_URL=https://wargaku.vercel.app
 ```
 
-Warga menerima email undangan → membuka tautan → membuat kata sandi di halaman `/atur-sandi`.
+Fungsi membuat akun lalu mengirim email **"Atur kata sandi"** (tautan recovery). Warga membuka tautan → membuat kata sandi di halaman `/atur-sandi`. Tautan bertipe *invite* tidak dipakai karena ditolak server (`otp_expired`) pada project ini.
+
+> **Email:** pengirim bawaan Supabase hanya mengizinkan beberapa email per jam dan template tidak bisa diubah di paket gratis. Untuk RT dengan banyak warga, pasang SMTP sendiri (mis. Brevo/Resend gratis) di *Authentication → SMTP Settings*, lalu aktifkan template Indonesia `supabase/templates/recovery.html` di `config.toml`.
 
 ## 4. Jalankan & deploy aplikasi
 

@@ -458,7 +458,7 @@ export const actions = {
         const body = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
         throw new Error(body?.error ?? 'Gagal membuat akun. Pastikan Edge Function invite-user sudah di-deploy.');
       }
-      return (data as { userId: string }).userId;
+      return data as { userId: string; emailSent: boolean; emailError: string | null };
     }, 'users.manage');
   },
 

@@ -86,7 +86,7 @@ function InviteForm({ open, onClose }: { open: boolean; onClose: () => void }) {
     e.preventDefault();
     const r = await actions.createAccount(f.resident, f.role, f.email);
     if (!r.ok) return setErr(r.error);
-    toast('Akun dibuat. Pada mode Supabase, undangan dikirim ke email warga.');
+    toast(r.data.emailSent ? 'Akun dibuat. Email "Atur kata sandi" dikirim ke warga.' : `Akun dibuat, tetapi email belum terkirim: ${r.data.emailError}`, r.data.emailSent ? 'success' : 'error');
     onClose();
   };
   return (

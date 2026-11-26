@@ -50,13 +50,19 @@ Deno.serve(async (req) => {
   const { data: me } = await admin.from('user_memberships').select('role, is_active').eq('user_id', who.user.id).eq('neighborhood_id', resident.neighborhood_id).maybeSingle();
   if (!me || !me.is_active || me.role !== 'ketua_rt') return json({ error: 'Hanya Ketua RT yang dapat membuat akun' }, 403);
 
-  // 3. Undang via email (profil dibuat otomatis oleh trigger handle_new_user)
-  const { data: invited, error: iErr } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: resident.full_name, phone: resident.phone },
-    redirectTo: `${site}/atur-sandi`,
+  // 3. Buat akun (profil dibuat otomatis oleh trigger handle_new_user).
+  // Catatan: tautan bertipe "invite" ditolak (otp_expired) di project ini, sedangkan tautan
+  // recovery berjalan normal, jadi akun dibuat dulu lalu dikirimi email "Atur kata sandi".
+  const { data: created, error: cErr } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { full_name: resident.full_name, phone: resident.phone },
   });
-  if (iErr || !invited.user) return json({ error: iErr?.message ?? 'Gagal mengirim undangan' }, 400);
-  const uid = invited.user.id;
+  if (cErr || !created.user) {
+    const taken = /already been registered|already exists/i.test(cErr?.message ?? '');
+    return json({ error: taken ? 'Email ini sudah dipakai akun lain' : cErr?.message ?? 'Gagal membuat akun' }, taken ? 409 : 400);
+  }
+  const uid = created.user.id;
 
   await admin.from('profiles').upsert({ id: uid, full_name: resident.full_name, email, phone: resident.phone }, { onConflict: 'id' });
   const { error: mErr } = await admin.from('user_memberships').insert({ neighborhood_id: resident.neighborhood_id, user_id: uid, role, resident_id: resident.id });
@@ -67,5 +73,10 @@ Deno.serve(async (req) => {
     record_id: uid, new_data: { role, resident: resident.full_name },
   });
 
-  return json({ userId: uid });
+  // 4. Kirim email "Atur kata sandi" (template recovery). Bila gagal (mis. batas kirim email),
+  //    akun tetap jadi dan warga bisa memakai "Lupa kata sandi" di halaman masuk.
+  const pub = createClient(url, anon, { auth: { persistSession: false } });
+  const { error: eErr } = await pub.auth.resetPasswordForEmail(email, { redirectTo: `${site}/atur-sandi` });
+
+  return json({ userId: uid, emailSent: !eErr, emailError: eErr ? (eErr.status === 429 ? 'Batas kirim email tercapai. Minta warga memakai "Lupa kata sandi" nanti.' : eErr.message) : null });
 });
