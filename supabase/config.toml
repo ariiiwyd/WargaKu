@@ -19,8 +19,8 @@ sql_paths = ["./seed.sql"]
 
 [auth]
 enabled = true
-site_url = "https://wargaku-sooty.vercel.app"
-additional_redirect_urls = ["https://wargaku-sooty.vercel.app/atur-sandi", "http://localhost:5173/atur-sandi"]
+site_url = "https://wargaku-cipadujaya.vercel.app"
+additional_redirect_urls = ["https://wargaku-cipadujaya.vercel.app/atur-sandi", "https://wargaku-sooty.vercel.app/atur-sandi", "http://localhost:5173/atur-sandi"]
 jwt_expiry = 3600
 # Akun hanya dibuat lewat undangan pengurus (Edge Function invite-user).
 enable_signup = false
