@@ -1,0 +1,163 @@
+import { useRef, useState, type FormEvent } from 'react';
+import { Building2, Database, History, Monitor, Moon, Palette, RotateCcw, Smartphone, Sun, UserRound } from 'lucide-react';
+import { usePageEnter, useToast } from '@/motion';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Avatar, Button, Card, CardHeader, Choice, Field, Input } from '@/components/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/DialogShell';
+import { Tabs } from '@/components/ui/Tabs';
+import { useDatabase, useLookups, useMe } from '@/hooks/useData';
+import { actions, useDb } from '@/stores/db.store';
+import { useUi } from '@/stores/ui.store';
+import { can, ROLE_LABEL } from '@/app/permissions';
+import { dateTime } from '@/lib/format';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import type { ThemePref } from '@/types/models';
+
+type TabKey = 'profil' | 'rt' | 'audit' | 'sistem';
+
+export function SettingsPage() {
+  const me = useMe()!;
+  const ref = useRef<HTMLDivElement>(null);
+  usePageEnter(ref);
+  const [tab, setTab] = useState<TabKey>('profil');
+  const tabs = [
+    { value: 'profil' as const, label: me.role === 'warga' ? 'Profil' : 'Profil & tampilan' },
+    ...(can(me.role, 'settings.rt') ? [{ value: 'rt' as const, label: 'Identitas RT' }] : []),
+    ...(can(me.role, 'audit.view') || can(me.role, 'audit.finance') ? [{ value: 'audit' as const, label: 'Riwayat aktivitas' }] : []),
+    { value: 'sistem' as const, label: 'Aplikasi' },
+  ];
+  return (
+    <div ref={ref} className="mx-auto max-w-[980px]">
+      <PageHeader title={me.role === 'warga' ? 'Profil' : 'Pengaturan'} description="Atur profil, tampilan, dan identitas lingkungan." />
+      <div className="mb-5" data-fade><Tabs label="Bagian pengaturan" value={tab} onChange={setTab} tabs={tabs} /></div>
+      {tab === 'profil' ? <Profile /> : null}
+      {tab === 'rt' ? <RtIdentity /> : null}
+      {tab === 'audit' ? <Audit /> : null}
+      {tab === 'sistem' ? <System /> : null}
+    </div>
+  );
+}
+
+function Profile() {
+  const db = useDatabase();
+  const me = useMe()!;
+  const toast = useToast();
+  const p = db.profiles.find((x) => x.id === me.userId)!;
+  const [f, setF] = useState({ full_name: p.full_name, phone: p.phone, email: p.email });
+  const theme = useUi((s) => s.theme);
+  const setTheme = useUi((s) => s.setTheme);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const r = actions.updateProfile(f);
+    toast(r.ok ? 'Profil disimpan' : r.error, r.ok ? 'success' : 'error');
+  };
+  return (
+    <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+      <Card data-card>
+        <CardHeader title="Profil saya" icon={UserRound} />
+        <form onSubmit={submit} className="space-y-4 px-5 pb-5">
+          <div className="flex items-center gap-4">
+            <Avatar name={f.full_name || '?'} size={60} />
+            <div><p className="font-bold">{ROLE_LABEL[me.role]}</p><p className="text-[13px] text-muted">RT {db.neighborhood.rt_number} / RW {db.neighborhood.rw_number}</p></div>
+          </div>
+          <Field label="Nama lengkap" required><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nomor HP"><Input type="tel" inputMode="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+            <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+          </div>
+          <p className="text-[12.5px] text-muted">Kata sandi dikelola oleh Supabase Auth dan tidak disimpan di tabel profil.</p>
+          <div className="flex justify-end"><Button type="submit">Simpan profil</Button></div>
+        </form>
+      </Card>
+      <Card data-card>
+        <CardHeader title="Tampilan" icon={Palette} />
+        <div className="space-y-3 px-5 pb-5">
+          <Choice<ThemePref> name="Tema" value={theme} onChange={setTheme} options={[{ value: 'light', label: 'Terang', icon: Sun }, { value: 'dark', label: 'Gelap', icon: Moon }, { value: 'system', label: 'Sistem', icon: Monitor }]} />
+          <p className="text-[12.5px] text-muted">Preferensi disimpan per pengguna. "Sistem" mengikuti pengaturan perangkat Anda.</p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function RtIdentity() {
+  const db = useDatabase();
+  const toast = useToast();
+  const [f, setF] = useState(db.neighborhood);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const r = actions.updateNeighborhood(f);
+    toast(r.ok ? 'Identitas RT disimpan' : r.error, r.ok ? 'success' : 'error');
+  };
+  return (
+    <Card data-card>
+      <CardHeader title="Identitas RT" sub="Dipakai di kop surat, rekening iuran, dan laporan" icon={Building2} />
+      <form onSubmit={submit} className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
+        <Field label="Nama lingkungan" required className="sm:col-span-2"><Input value={f.name} onChange={set('name')} /></Field>
+        <Field label="Nomor RT"><Input value={f.rt_number} onChange={set('rt_number')} /></Field>
+        <Field label="Nomor RW"><Input value={f.rw_number} onChange={set('rw_number')} /></Field>
+        <Field label="Kelurahan"><Input value={f.village} onChange={set('village')} /></Field>
+        <Field label="Kecamatan"><Input value={f.district} onChange={set('district')} /></Field>
+        <Field label="Kota/Kabupaten"><Input value={f.city} onChange={set('city')} /></Field>
+        <Field label="Provinsi"><Input value={f.province} onChange={set('province')} /></Field>
+        <Field label="Kode pos"><Input inputMode="numeric" value={f.postal_code} onChange={set('postal_code')} /></Field>
+        <Field label="Alamat sekretariat"><Input value={f.address} onChange={set('address')} /></Field>
+        <div className="sm:col-span-2 mt-2 border-t border-line pt-4"><p className="text-[14px] font-bold">Rekening kas RT</p><p className="text-[12.5px] text-muted">Ditampilkan ke warga saat membayar iuran.</p></div>
+        <Field label="Bank"><Input value={f.bank_name} onChange={set('bank_name')} /></Field>
+        <Field label="Atas nama"><Input value={f.bank_account_name} onChange={set('bank_account_name')} /></Field>
+        <Field label="Nomor rekening" className="sm:col-span-2"><Input value={f.bank_account_number} onChange={set('bank_account_number')} /></Field>
+        <div className="flex justify-end sm:col-span-2"><Button type="submit">Simpan identitas</Button></div>
+      </form>
+    </Card>
+  );
+}
+
+function Audit() {
+  const db = useDatabase();
+  const me = useMe()!;
+  const L = useLookups();
+  const fin = ['dues_invoices', 'dues_payments', 'cash_transactions', 'dues_types'];
+  const rows = db.audit.filter((a) => can(me.role, 'audit.view') || fin.includes(a.table_name)).slice(0, 60);
+  return (
+    <Card data-card>
+      <CardHeader title="Riwayat aktivitas" sub={can(me.role, 'audit.view') ? 'Seluruh aktivitas penting · tidak dapat diubah atau dihapus' : 'Aktivitas keuangan'} icon={History} />
+      <ol className="relative mx-5 mb-5 border-l border-line pl-5">
+        {rows.map((a) => (
+          <li key={a.id} className="relative pb-4 last:pb-0" data-row>
+            <span className="absolute top-1.5 -left-[25px] size-2.5 rounded-full bg-primary ring-4 ring-card" />
+            <p className="text-[13.5px] font-semibold">{a.summary}</p>
+            <p className="text-[12px] text-muted">{L.userName(a.user_id)} · <span className="font-mono">{a.table_name}</span> · {dateTime(a.created_at)}</p>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+function System() {
+  const toast = useToast();
+  const reset = useDb((s) => s.reset);
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Card data-card>
+        <CardHeader title="Pasang di layar utama" icon={Smartphone} />
+        <div className="space-y-2 px-5 pb-5 text-[13.5px] leading-relaxed text-ink-2">
+          <p>WargaKu adalah Progressive Web App. Di Android (Chrome), buka menu ⋮ lalu pilih <b>Instal aplikasi</b>. Di iPhone (Safari), ketuk <b>Bagikan → Tambah ke Layar Utama</b>.</p>
+          <p className="text-muted">Data keuangan dan dokumen pribadi tidak disimpan untuk offline. Pembayaran dan verifikasi memerlukan koneksi internet.</p>
+        </div>
+      </Card>
+      <Card data-card>
+        <CardHeader title="Sumber data" icon={Database} />
+        <div className="space-y-3 px-5 pb-5 text-[13.5px] text-ink-2">
+          <p>{isSupabaseConfigured ? 'Supabase terdeteksi di .env. Layanan data belum disambungkan ke tampilan; aplikasi masih memakai data demo.' : 'Mode demo: data contoh tersimpan di browser ini saja. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY untuk produksi.'}</p>
+          <Button variant="secondary" icon={RotateCcw} onClick={() => setConfirm(true)}>Kembalikan data demo</Button>
+        </div>
+      </Card>
+      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} tone="red" icon={RotateCcw} title="Kembalikan data demo?" confirmLabel="Kembalikan"
+        message="Semua perubahan yang Anda buat di mode demo akan dihapus dari browser ini dan diganti data contoh awal."
+        onConfirm={() => { reset(); setConfirm(false); toast('Data demo dikembalikan'); }} />
+    </div>
+  );
+}

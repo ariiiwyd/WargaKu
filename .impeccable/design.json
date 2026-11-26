@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-26T14:00:00+07:00",
+  "title": "Design System: WargaKu",
+  "extensions": {
+    "colorMeta": {
+      "primary-blue": { "role": "primary", "displayName": "Biru Modern", "canonical": "#2563EB", "tonalRamp": ["#0B1E4D", "#12307A", "#1D4ED8", "#2563EB", "#3B82F6", "#60A5FA", "#A9C8FF", "#E7EFFF"] },
+      "fresh-green": { "role": "secondary", "displayName": "Hijau Segar", "canonical": "#10B981", "tonalRamp": ["#053D2D", "#065F46", "#047857", "#059669", "#10B981", "#34D399", "#A7F3D0", "#E3F8F0"] },
+      "warm-orange": { "role": "tertiary", "displayName": "Oranye Hangat", "canonical": "#F59E0B", "tonalRamp": ["#4A2A05", "#78350F", "#B45309", "#D97706", "#F59E0B", "#FBBF24", "#FDE68A", "#FEF3DC"] },
+      "alert-red": { "role": "tertiary", "displayName": "Merah Waspada", "canonical": "#E5484D", "tonalRamp": ["#45202A", "#7F1D1D", "#C2262C", "#DC2626", "#E5484D", "#F87171", "#FCA5A5", "#FDECEC"] },
+      "modern-navy": { "role": "neutral", "displayName": "Navy Modern", "canonical": "#0F172A", "tonalRamp": ["#0B1222", "#0F172A", "#172238", "#1E293B", "#24324D", "#334155", "#C6D1E3", "#F1F5F9"] },
+      "page-mist": { "role": "neutral", "displayName": "Kabut Halaman", "canonical": "#F8FAFC", "tonalRamp": ["#334155", "#5B6B82", "#94A3B8", "#CBD5E1", "#E2E8F0", "#E8EEF6", "#F1F5F9", "#F8FAFC"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Slogan di panel brand halaman masuk saja." },
+      "headline": { "displayName": "Headline", "purpose": "Judul halaman (SplitTitle) dan salam banner." },
+      "title": { "displayName": "Title", "purpose": "Judul kartu, nama di daftar." },
+      "body": { "displayName": "Body", "purpose": "Isi dan deskripsi." },
+      "label": { "displayName": "Label", "purpose": "Label field, tab, badge, keterangan." },
+      "figure": { "displayName": "Figure", "purpose": "Saldo, tagihan, statistik; angka tabular." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgb(15 23 42 / .05), 0 1px 1px rgb(15 23 42 / .03)", "purpose": "Kartu saat diam." },
+      { "name": "shadow-md", "value": "0 8px 24px -12px rgb(15 23 42 / .18), 0 2px 6px -2px rgb(15 23 42 / .06)", "purpose": "Hover card-lift." },
+      { "name": "shadow-lg", "value": "0 24px 60px -24px rgb(15 23 42 / .35), 0 6px 16px -8px rgb(15 23 42 / .12)", "purpose": "Modal, sheet, popover, toast, tab bar." },
+      { "name": "glow-primary", "value": "0 6px 16px -8px var(--primary)", "purpose": "Tombol utama dan pill sidebar aktif." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Transisi CSS (card-lift, sidebar)." },
+      { "name": "gsap-out", "value": "power3.out", "purpose": "Masuk/bergerak masuk." },
+      { "name": "gsap-inOut", "value": "power3.inOut", "purpose": "Pill, Flip, perpindahan posisi." },
+      { "name": "gsap-in", "value": "power2.in", "purpose": "Keluar/menghilang." },
+      { "name": "gsap-title", "value": "power4.out", "purpose": "Huruf judul SplitTitle (0,85 dtk, stagger 0,022)." },
+      { "name": "gsap-pop", "value": "back.out(1.7)", "purpose": "Toast & popover." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Satu aksi utama per area.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Ajukan surat</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border:0;border-radius:12px;background:var(--primary,#2563EB);color:#fff;font:600 14px 'Plus Jakarta Sans',sans-serif;box-shadow:0 6px 16px -8px var(--primary,#2563EB);cursor:pointer;transition:background .2s,transform .2s}.ds-btn-primary:hover{background:var(--primary-hover,#1D4ED8)}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:2px solid var(--primary,#2563EB);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Aksi pendamping (Batal, Ekspor).",
+      "html": "<button class=\"ds-btn-secondary\">Batal</button>",
+      "css": ".ds-btn-secondary{height:44px;padding:0 16px;border:1px solid var(--line,#E2E8F0);border-radius:12px;background:var(--card,#fff);color:var(--ink,#0F172A);font:600 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,border-color .2s}.ds-btn-secondary:hover{background:var(--panel,#F1F5F9);border-color:var(--line-strong,#CBD5E1)}.ds-btn-secondary:focus-visible{outline:2px solid var(--primary,#2563EB);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Field dengan label di atas dan cincin fokus biru.",
+      "html": "<label class=\"ds-field\"><span>Nama lengkap</span><input class=\"ds-input\" placeholder=\"Ani Lestari\"/></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;font:600 13px 'Plus Jakarta Sans',sans-serif;color:var(--ink-2,#334155)}.ds-input{height:44px;padding:0 14px;border:1px solid var(--line,#E2E8F0);border-radius:12px;background:var(--card,#fff);color:var(--ink,#0F172A);font:400 14.5px 'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s}.ds-input:focus{border-color:var(--primary,#2563EB);box-shadow:0 0 0 4px rgb(37 99 235 / .15)}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status",
+      "description": "Peta status tetap: hijau beres, oranye menunggu, merah ditolak, ungu menunggu TTD.",
+      "html": "<span class=\"ds-badge ds-badge-green\"><i></i>Lunas</span> <span class=\"ds-badge ds-badge-orange\"><i></i>Menunggu verifikasi</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font:600 11.5px 'Plus Jakarta Sans',sans-serif}.ds-badge i{width:6px;height:6px;border-radius:50%;background:currentColor}.ds-badge-green{background:var(--success-soft,#E3F8F0);color:var(--success-ink,#047857)}.ds-badge-orange{background:var(--warn-soft,#FEF3DC);color:var(--warn-ink,#B45309)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Kartu putih 18px, garis rambut, datar saat diam.",
+      "html": "<section class=\"ds-card\"><h3>Iuran November 2026</h3><p>Rp1.650.000 dari target Rp1.700.000</p></section>",
+      "css": ".ds-card{border:1px solid var(--line,#E2E8F0);border-radius:18px;background:var(--card,#fff);padding:20px;box-shadow:0 1px 2px rgb(15 23 42 / .05);font-family:'Plus Jakarta Sans',sans-serif;transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s}.ds-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px -12px rgb(15 23 42 / .18)}.ds-card h3{margin:0;font-size:15px;font-weight:700;color:var(--ink,#0F172A)}.ds-card p{margin:6px 0 0;font-size:13px;color:var(--muted,#5B6B82)}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "Sidebar navy dengan pill biru untuk item aktif.",
+      "html": "<nav class=\"ds-side\"><a class=\"on\">Dashboard</a><a>Data Warga</a><a>Kas &amp; Iuran <b>6</b></a></nav>",
+      "css": ".ds-side{display:flex;flex-direction:column;gap:4px;width:240px;padding:12px;background:#0F172A;border-radius:16px;font:600 14px 'Plus Jakarta Sans',sans-serif}.ds-side a{display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 14px;border-radius:12px;color:#C6D1E3;cursor:pointer}.ds-side a:hover{background:rgb(255 255 255 / .06);color:#fff}.ds-side a.on{background:#2563EB;color:#fff;box-shadow:0 10px 24px -12px #2563EB}.ds-side b{min-width:20px;height:20px;border-radius:9999px;background:#F59E0B;color:#0F172A;font-size:11px;display:grid;place-items:center}"
+    },
+    {
+      "name": "Greeting Banner",
+      "kind": "custom",
+      "refersTo": "hero-banner",
+      "description": "Banner sapaan biru dengan ilustrasi deretan rumah (signature).",
+      "html": "<section class=\"ds-hero\"><h2>Selamat pagi, Pak Budi</h2><p>Ketua RT 001 · Kamis, 26 Nov 2026</p><span>12 hal menunggu tindakan Anda</span></section>",
+      "css": ".ds-hero{border-radius:24px;padding:32px;color:#fff;background:radial-gradient(90% 140% at 0% 0%,#3B82F6 0%,#2563EB 45%,#1E40AF 100%);font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 24px 50px -28px #1D4ED8}.ds-hero h2{margin:0;font-size:32px;font-weight:800;letter-spacing:-.025em}.ds-hero p{margin:6px 0 16px;font-size:14px;opacity:.8}.ds-hero span{display:inline-block;padding:6px 12px;border-radius:9999px;background:rgb(255 255 255 / .14);font-size:12.5px;font-weight:600}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Balai Warga Digital",
+    "overview": "WargaKu adalah balai warga yang dipindahkan ke layar: tempat resmi tapi ramah, tempat pengurus bekerja dengan tertib dan warga datang tanpa canggung. Seluruh sistem berpijak pada biru modern dan putih bersih dari brand sheet, dengan navy sebagai \"papan pengumuman\" yang tegas (sidebar, kartu saldo, kartu ronda) dan hijau segar sebagai tanda urusan beres.",
+    "keyCharacteristics": [
+      "Biru modern + putih, navy untuk permukaan berwibawa, hijau = beres, oranye = perlu perhatian, merah = ditolak/darurat.",
+      "Satu keluarga huruf: Plus Jakarta Sans, judul ExtraBold dengan tracking rapat, angka tabular.",
+      "Kartu putih 18px bergaris hairline; banner sapaan biru 24px dengan ilustrasi rumah.",
+      "Bahasa Indonesia sederhana di semua label, tombol menyebut aksinya.",
+      "Desktop: sidebar navy yang bisa diperkecil. Ponsel: tab bar melayang di bawah + menu \"Lainnya\"."
+    ],
+    "rules": [
+      { "name": "The Status Means Something Rule", "body": "Hijau, oranye, merah, dan ungu hanya untuk status. Jangan dipakai sebagai hiasan atau variasi warna kartu.", "section": "colors" },
+      { "name": "The One Blue Rule", "body": "Hanya ada satu biru aksi. Tombol utama per area cukup satu; aksi lain memakai secondary, soft, atau ghost.", "section": "colors" },
+      { "name": "The Token-Only Rule", "body": "Warna selalu lewat token, tidak pernah hex di komponen, supaya mode gelap ikut otomatis.", "section": "colors" },
+      { "name": "The Plain Bahasa Rule", "body": "Semua teks antarmuka berbahasa Indonesia sederhana. Tombol menyebut aksinya, pesan galat menyebut masalah dan jalan keluarnya.", "section": "typography" },
+      { "name": "The No Eyebrow Rule", "body": "Tidak ada label kecil di atas judul.", "section": "typography" },
+      { "name": "The Flat-At-Rest Rule", "body": "Kartu diam hanya punya garis rambut + shadow-sm. Bayangan lebih besar hanya sebagai respons.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do pakai token warna dan komponen yang sudah ada sebelum membuat yang baru.",
+      "Do beri setiap halaman usePageEnter + PageHeader (SplitTitle) dan tandai elemen dengan data-card / data-row / data-fade.",
+      "Do tampilkan nominal sebagai rupiah() dengan angka tabular, tanggal dalam Asia/Jakarta.",
+      "Do samarkan NIK dan No. KK dengan maskId() secara bawaan.",
+      "Do minta konfirmasi untuk setiap persetujuan, penolakan, verifikasi, pembatalan, dan koreksi.",
+      "Do sediakan state loading, kosong, galat, dan sukses di setiap alur.",
+      "Do uji di 390px dan 1440px, terang dan gelap."
+    ],
+    "donts": [
+      "Don't menulis hex langsung di komponen atau memakai warna status sebagai hiasan.",
+      "Don't menambah eyebrow, teks bergradasi, atau garis tepi berwarna tebal di sisi kartu.",
+      "Don't memakai emoji atau karakter unicode sebagai ikon.",
+      "Don't menumpuk kartu di dalam kartu.",
+      "Don't menambah kurva animasi baru di luar EASE atau menganimasikan selain transform/opacity.",
+      "Don't mengganti font, palet, atau logo tanpa persetujuan pemilik produk."
+    ]
+  }
+}

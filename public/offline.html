@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WargaKu · Tidak ada koneksi</title>
+  <style>
+    :root { --bg:#F8FAFC; --card:#fff; --ink:#0F172A; --muted:#5b6b82; --primary:#2563EB; --line:#E2E8F0; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0F172A; --card:#1E293B; --ink:#F8FAFC; --muted:#9aa8bd; --primary:#3B82F6; --line:#334155; } }
+    body { margin:0; min-height:100dvh; display:grid; place-items:center; background:var(--bg); color:var(--ink); font-family:'Plus Jakarta Sans',system-ui,sans-serif; padding:16px; }
+    main { max-width:400px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:24px; padding:32px 24px; }
+    img { width:64px; height:64px; }
+    h1 { font-size:22px; margin:16px 0 6px; }
+    p { color:var(--muted); line-height:1.6; font-size:15px; margin:0 0 20px; }
+    button { height:44px; padding:0 20px; border:0; border-radius:12px; background:var(--primary); color:#fff; font:600 15px inherit; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/favicon.svg" alt="WargaKu" />
+    <h1>Tidak ada koneksi internet</h1>
+    <p>Pembayaran, verifikasi, pengajuan surat, dan perubahan data memerlukan koneksi. Data pribadi dan keuangan tidak disimpan untuk offline demi keamanan.</p>
+    <button onclick="location.reload()">Coba lagi</button>
+  </main>
+</body>
+</html>
