@@ -92,16 +92,19 @@ function Patrol() {
         <Card data-card>
           <CardHeader title="7 malam ke depan" sub="Ronda 22.00–04.00 WIB" icon={Flashlight} />
           <ul className="grid gap-2 px-3 pb-3 sm:grid-cols-2">
-            {week.map((s, i) => {
-              const t = db.patrolTeams.find((x) => x.id === s.team_id)!;
+            {week.map((s) => {
+              const t = db.patrolTeams.find((x) => x.id === s.team_id);
+              // "Malam ini" hanya untuk jadwal bertanggal hari ini, bukan sekadar jadwal pertama.
+              const tonight = s.patrol_date === today;
               return (
-                <li key={s.id} data-row className={cx('rounded-2xl p-3.5', i === 0 ? 'bg-navy text-white' : 'border border-line bg-panel/40')}>
-                  <p className={cx('text-[12px] font-semibold', i === 0 ? 'text-navy-ink' : 'text-muted')}>{i === 0 ? 'Malam ini' : wd(s.patrol_date)} · {dateShort(s.patrol_date)}</p>
-                  <p className="mt-0.5 text-[15px] font-extrabold">{t.name}</p>
-                  <div className="mt-2 flex -space-x-2">{t.member_ids.slice(0, 6).map((m) => <Avatar key={m} name={L.resident(m)?.full_name ?? '?'} size={26} className={i === 0 ? 'ring-2 ring-navy' : 'ring-2 ring-card'} />)}</div>
+                <li key={s.id} data-row className={cx('rounded-2xl p-3.5', tonight ? 'bg-navy text-white' : 'border border-line bg-panel/40')}>
+                  <p className={cx('text-[12px] font-semibold', tonight ? 'text-navy-ink' : 'text-muted')}>{tonight ? 'Malam ini' : wd(s.patrol_date)} · {dateShort(s.patrol_date)}</p>
+                  <p className="mt-0.5 text-[15px] font-extrabold">{t?.name ?? 'Regu tidak ditemukan'}</p>
+                  <div className="mt-2 flex -space-x-2">{(t?.member_ids ?? []).slice(0, 6).map((m) => <Avatar key={m} name={L.resident(m)?.full_name ?? '?'} size={26} className={tonight ? 'ring-2 ring-navy' : 'ring-2 ring-card'} />)}</div>
                 </li>
               );
             })}
+            {!week.length ? <li className="px-2 py-3 text-[13px] text-muted sm:col-span-2">Belum ada jadwal ronda untuk 7 malam ke depan.</li> : null}
           </ul>
         </Card>
         <Card data-card>
@@ -109,26 +112,28 @@ function Patrol() {
           <ul className="divide-y divide-line">
             {past.map((s) => {
               const r = db.patrolReports.find((x) => x.schedule_id === s.id);
-              const t = db.patrolTeams.find((x) => x.id === s.team_id)!;
+              const t = db.patrolTeams.find((x) => x.id === s.team_id);
               return (
                 <li key={s.id} className="flex items-start gap-3 px-5 py-3.5">
                   <span className={cx('mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl', !r ? 'bg-panel-2 text-muted' : r.status === 'aman' ? 'bg-success-soft text-success-ink' : r.status === 'ada_kejadian' ? 'bg-danger-soft text-danger-ink' : 'bg-warn-soft text-warn-ink')}>
                     {r?.status === 'ada_kejadian' ? <Siren className="size-4" /> : <CircleCheckBig className="size-4" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-bold">{wd(s.patrol_date)}, {dateShort(s.patrol_date)} · {t.name}</span>
+                    <span className="block text-[13.5px] font-bold">{wd(s.patrol_date)}, {dateShort(s.patrol_date)} · {t?.name ?? '—'}</span>
                     <span className="block text-[13px] text-ink-2">{r ? r.report : 'Belum ada laporan'}</span>
                   </span>
                   {!r && can(me.role, 'security.manage') ? <Button size="sm" variant="soft" onClick={() => setRep(s.id)}>Isi laporan</Button> : null}
                 </li>
               );
             })}
+            {!past.length ? <li className="px-5 py-4 text-[13px] text-muted">Belum ada ronda yang terlaksana.</li> : null}
           </ul>
         </Card>
       </div>
       <Card data-card>
         <CardHeader title="Regu & anggota" icon={MoonStar} />
         <ul className="space-y-3 px-4 pb-4">
+          {!db.patrolTeams.length ? <li className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-[13px] text-muted">Belum ada regu ronda.</li> : null}
           {db.patrolTeams.map((t) => (
             <li key={t.id} className="rounded-2xl border border-line p-4">
               <div className="flex items-center justify-between">

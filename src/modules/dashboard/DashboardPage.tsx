@@ -175,6 +175,7 @@ function AdminDashboard({ me }: { me: Actor }) {
                 </Link>
               </li>
             ))}
+            {!announcements.length ? <li className="px-3 py-4 text-[13px] text-muted">Belum ada pengumuman yang terbit.</li> : null}
           </ul>
         </Card>
       </div>
@@ -214,6 +215,7 @@ function AdminDashboard({ me }: { me: Actor }) {
                 <p className="text-[12px] text-muted">{L.userName(f.user_id)} · {relative(f.created_at)}</p>
               </li>
             ))}
+            {!feed.length ? <li className="py-1 text-[13px] text-muted">{can(me.role, 'audit.view') || can(me.role, 'audit.finance') ? 'Belum ada aktivitas tercatat.' : 'Riwayat aktivitas hanya dapat dilihat Ketua RT dan Bendahara.'}</li> : null}
           </ol>
         </Card>
       </div>
@@ -227,6 +229,7 @@ function UpcomingCard({ db }: { db: Database }) {
     <Card data-card>
       <CardHeader title="Agenda terdekat" icon={CalendarDays} action={<Link to="/kegiatan" className="text-[13px] font-semibold text-primary hover:underline">Kalender</Link>} />
       <ul className="space-y-2 px-3 pb-3">
+        {!up.length ? <li className="px-2 py-3 text-[13px] text-muted">Belum ada agenda. Kegiatan baru akan muncul di sini.</li> : null}
         {up.map((a) => {
           const d = new Date(a.start_at);
           return (
@@ -359,6 +362,7 @@ function ResidentHome({ me }: { me: Actor }) {
                 </Link>
               </li>
             ))}
+            {!news.length ? <li className="px-3 py-4 text-[13px] text-muted">Belum ada berita dari pengurus.</li> : null}
           </ul>
         </Card>
         <div className="grid content-start gap-5">

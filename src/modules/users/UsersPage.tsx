@@ -23,7 +23,8 @@ export function UsersPage() {
   const [toggle, setToggle] = useState<{ user: string; active: boolean } | null>(null);
   const [invite, setInvite] = useState(false);
   const rows = db.memberships.map((m) => ({ m, p: L.profile(m.user_id)!, r: L.resident(m.resident_id) })).sort((a, b) => ROLES.indexOf(a.m.role) - ROLES.indexOf(b.m.role));
-  const roleAudit = db.audit.filter((a) => ['assign_role', 'activate_user', 'deactivate_user', 'invite_user'].includes(a.action)).slice(0, 8);
+  // Perubahan role/aktif dicatat trigger sebagai insert/update pada user_memberships; undangan oleh Edge Function sebagai invite_user.
+  const roleAudit = db.audit.filter((a) => a.table_name === 'user_memberships' || a.action === 'invite_user').slice(0, 8);
 
   return (
     <div ref={ref}>

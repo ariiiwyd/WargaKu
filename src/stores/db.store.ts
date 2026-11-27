@@ -309,6 +309,10 @@ export const actions = {
     }, 'announcements.publish');
   },
   markAnnouncementRead(id: string) {
+    const s = useDb.getState().db;
+    const uid = useAuth.getState().userId;
+    // Sudah tercatat dibaca: jangan memuat ulang seluruh data hanya untuk tidak mengubah apa pun.
+    if (s?.announcementReads.some((r) => r.announcement_id === id && r.user_id === uid)) return Promise.resolve(ok(undefined));
     return run(async ({ db, me, nid }) => {
       if (db.announcementReads.some((r) => r.announcement_id === id && r.user_id === me.userId)) return;
       await q(sb().from('announcement_reads').upsert({ neighborhood_id: nid, announcement_id: id, user_id: me.userId }, { onConflict: 'announcement_id,user_id', ignoreDuplicates: true }));
@@ -317,6 +321,7 @@ export const actions = {
 
   /* ---------------- Notifikasi ---------------- */
   markNotificationRead(id: string) {
+    if (useDb.getState().db?.notifications.find((n) => n.id === id)?.read_at) return Promise.resolve(ok(undefined));
     return run(async ({ db, me }) => {
       if (db.notifications.find((n) => n.id === id)?.read_at) return;
       await q(sb().from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id).eq('user_id', me.userId));

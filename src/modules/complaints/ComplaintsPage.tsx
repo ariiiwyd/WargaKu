@@ -122,7 +122,7 @@ function Detail({ id, onClose }: { id: string | null; onClose: () => void }) {
             <p className="text-[14.5px] leading-relaxed text-ink-2" data-sheet-item>{c.description}</p>
             <dl className="grid grid-cols-2 gap-4" data-sheet-item>
               <Info label="Lokasi">{c.location}</Info>
-              <Info label="Pelapor">{L.resident(c.resident_id)?.full_name}</Info>
+              <Info label="Pelapor">{L.resident(c.resident_id)?.full_name ?? L.userName(c.created_by)}</Info>
               <Info label="Dilaporkan">{dateTime(c.created_at)}</Info>
               <Info label="Petugas">{c.assigned_to ? L.userName(c.assigned_to) : 'Belum ditugaskan'}</Info>
             </dl>
