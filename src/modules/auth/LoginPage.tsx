@@ -95,6 +95,8 @@ export function LoginPage() {
   const recovery = useAuth((s) => s.recovery);
   const signIn = useAuth((s) => s.signIn);
   const sendReset = useAuth((s) => s.sendReset);
+  const notice = useAuth((s) => s.notice);
+  const clearNotice = useAuth((s) => s.clearNotice);
   const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -109,6 +111,7 @@ export function LoginPage() {
     e.preventDefault();
     if (!email.trim()) return setError('Masukkan email Anda.');
     if (mode === 'login' && !password) return setError('Masukkan kata sandi.');
+    clearNotice();
     setBusy(true);
     const err = mode === 'login' ? await signIn(email, password) : await sendReset(email);
     setBusy(false);
@@ -137,6 +140,12 @@ export function LoginPage() {
           <p data-fade className="mt-2 text-[15px] text-muted">
             {mode === 'login' ? 'Gunakan email dan kata sandi akun yang diberikan pengurus RT.' : 'Masukkan email akun Anda. Kami kirimkan tautan untuk membuat kata sandi baru.'}
           </p>
+
+          {notice && mode === 'login' ? (
+            <div className="mt-6">
+              <Notice tone="warn">{notice}</Notice>
+            </div>
+          ) : null}
 
           {unconfigured ? (
             <div className="mt-6">

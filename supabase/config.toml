@@ -24,6 +24,9 @@ additional_redirect_urls = ["https://wargaku-cipadujaya.vercel.app/atur-sandi", 
 jwt_expiry = 3600
 # Akun hanya dibuat lewat undangan pengurus (Edge Function invite-user).
 enable_signup = false
+# Kata sandi minimal 8 karakter dengan huruf dan angka (sama dengan form Atur kata sandi).
+minimum_password_length = 8
+password_requirements = "letters_digits"
 
 [auth.mfa.totp]
 enroll_enabled = true

@@ -27,6 +27,9 @@ export function friendlyError(e: unknown): string {
   if (code === '23514') return 'Data tidak memenuhi aturan validasi.';
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'Tidak ada koneksi internet. Periksa jaringan Anda lalu coba lagi.';
   if (/Invalid login credentials/i.test(msg)) return 'Email atau kata sandi salah.';
+  if (/Password should be at least|weak_password|Password should contain/i.test(msg) || code === 'weak_password') return 'Kata sandi minimal 8 karakter dengan kombinasi huruf dan angka.';
+  if (/should be different from the old password/i.test(msg)) return 'Kata sandi baru harus berbeda dari kata sandi lama.';
+  if (/rate limit|too many requests|over_request_rate_limit/i.test(msg)) return 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.';
   if (/Email not confirmed/i.test(msg)) return 'Email belum dikonfirmasi. Buka tautan yang dikirim ke email Anda.';
   if (/JWT expired|session/i.test(msg)) return 'Sesi berakhir. Silakan masuk kembali.';
   return msg || 'Terjadi kesalahan. Coba lagi.';

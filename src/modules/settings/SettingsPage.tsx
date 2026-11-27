@@ -1,8 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Building2, History, KeyRound, Monitor, Moon, Palette, RefreshCw, Smartphone, Sun, UserRound } from 'lucide-react';
+import { Building2, History, KeyRound, LogOut, MonitorSmartphone, Monitor, Moon, Palette, RefreshCw, Smartphone, Sun, UserRound } from 'lucide-react';
 import { usePageEnter, useToast } from '@/motion';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, Button, Card, CardHeader, Choice, Field, Input } from '@/components/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/DialogShell';
+import { idleLabel } from '@/lib/session';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
 import { actions, useDb } from '@/stores/db.store';
@@ -138,10 +140,13 @@ function Audit() {
 
 function System() {
   const toast = useToast();
+  const me = useMe()!;
   const email = useAuth((s) => s.email);
   const sendReset = useAuth((s) => s.sendReset);
+  const signOutOthers = useAuth((s) => s.signOutOthers);
   const load = useDb((s) => s.load);
   const [busy, setBusy] = useState<'' | 'reset' | 'reload'>('');
+  const [askOthers, setAskOthers] = useState(false);
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <Card data-card>
@@ -173,6 +178,32 @@ function System() {
           </div>
         </div>
       </Card>
+      <Card data-card className="lg:col-span-2">
+        <CardHeader title="Sesi & perangkat" icon={MonitorSmartphone} />
+        <div className="space-y-3 px-5 pb-5 text-[13.5px] leading-relaxed text-ink-2">
+          <p>
+            Demi keamanan, akun keluar otomatis bila tidak digunakan selama <b className="text-ink">{idleLabel(me.role)}</b>. Satu menit sebelumnya muncul
+            peringatan untuk tetap masuk.
+          </p>
+          <p>Akun ini bisa dipakai di beberapa perangkat sekaligus. Bila HP hilang atau Anda lupa keluar di perangkat orang lain, keluarkan semua perangkat lain di sini.</p>
+          <Button variant="secondary" icon={LogOut} onClick={() => setAskOthers(true)}>Keluar dari perangkat lain</Button>
+        </div>
+      </Card>
+      <ConfirmDialog
+        open={askOthers}
+        onClose={() => setAskOthers(false)}
+        icon={LogOut}
+        tone="red"
+        title="Keluar dari semua perangkat lain?"
+        message="Akun Anda akan keluar di HP, tablet, atau komputer lain dalam beberapa menit. Perangkat yang sedang Anda pakai ini tetap masuk."
+        confirmLabel="Keluarkan perangkat lain"
+        onConfirm={async () => {
+          const err = await signOutOthers();
+          toast(err ?? 'Perangkat lain sudah dikeluarkan', err ? 'error' : 'success');
+          if (err) return false;
+          setAskOthers(false);
+        }}
+      />
     </div>
   );
 }

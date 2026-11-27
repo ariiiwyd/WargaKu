@@ -8,6 +8,7 @@ import { Avatar, Button, IconButton, Spinner, cx } from '@/components/ui/primiti
 import { LogoMark, Wordmark } from '@/components/ui/Logo';
 import { Popover } from './Popover';
 import { InstallButton, InstallIconButton } from '@/components/install/InstallApp';
+import { IdleGuard } from '@/components/session/IdleGuard';
 import { navFor, bottomNavFor, type NavItem } from '@/app/navigation';
 import { ROLE_LABEL, roleWithRt } from '@/app/permissions';
 import { useDatabase, useMe, unreadCount } from '@/hooks/useData';
@@ -106,6 +107,7 @@ function Shell() {
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} label="Semua menu">
         <MoreMenu items={nav} pathname={pathname} onClose={() => setMoreOpen(false)} />
       </Sheet>
+      <IdleGuard />
     </div>
   );
 }
