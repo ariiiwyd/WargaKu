@@ -35,7 +35,7 @@ const ACTION_LABEL: Record<string, string> = {
   insert: 'Menambahkan', update: 'Memperbarui', delete: 'Menghapus', verify_payment: 'Memverifikasi pembayaran',
   reject_payment: 'Menolak pembayaran', record_expense: 'Mencatat pengeluaran', record_income: 'Mencatat pemasukan',
   reverse_transaction: 'Membuat transaksi pembalik', create_invoice: 'Membuat tagihan', cancel_invoice: 'Membatalkan tagihan',
-  publish_announcement: 'Memublikasikan pengumuman', invite_user: 'Membuat akun', approve_letter: 'Menyetujui surat',
+  publish_announcement: 'Memublikasikan pengumuman', invite_user: 'Membuat akun', reset_mfa: 'Mereset verifikasi 2 langkah', approve_letter: 'Menyetujui surat',
 };
 const TABLE_LABEL: Record<string, string> = {
   residents: 'data warga', households: 'data keluarga', user_memberships: 'keanggotaan/role', dues_types: 'jenis iuran',

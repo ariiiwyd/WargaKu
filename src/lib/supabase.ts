@@ -27,6 +27,8 @@ export function friendlyError(e: unknown): string {
   if (code === '23514') return 'Data tidak memenuhi aturan validasi.';
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'Tidak ada koneksi internet. Periksa jaringan Anda lalu coba lagi.';
   if (/Invalid login credentials/i.test(msg)) return 'Email atau kata sandi salah.';
+  if (/Invalid TOTP code|mfa_verification_failed/i.test(msg) || code === 'mfa_verification_failed') return 'Kode salah atau sudah kedaluwarsa. Pastikan jam di HP benar, lalu masukkan kode terbaru.';
+  if (/challenge.*expired|mfa_challenge_expired/i.test(msg)) return 'Waktu verifikasi habis. Masukkan kode terbaru.';
   if (/Password should be at least|weak_password|Password should contain/i.test(msg) || code === 'weak_password') return 'Kata sandi minimal 8 karakter dengan kombinasi huruf dan angka.';
   if (/should be different from the old password/i.test(msg)) return 'Kata sandi baru harus berbeda dari kata sandi lama.';
   if (/rate limit|too many requests|over_request_rate_limit/i.test(msg)) return 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.';

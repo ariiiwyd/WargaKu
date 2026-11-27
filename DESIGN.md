@@ -298,6 +298,9 @@ Pita biru (`primary`, membulat 20px, cahaya biru seperti banner kegiatan warga) 
 ### Rapat online di detail kegiatan
 Kotak bergaris di atas deskripsi: abu saat belum dibuka (teks "Tombol gabung aktif 15 menit sebelum rapat"), berubah ke biru embun + ubin ikon biru saat bisa bergabung. Tombol utama "Gabung lewat Google Meet/Zoom" membuka tautan di tab baru langsung saat diklik, lalu mencatat "Hadir online". Notulen tampil sebagai panel abu muda (maks 65ch, `whitespace-pre-line`) dengan tombol biru "Tonton rekaman"; pengurus menulisnya lewat form + `ConfirmDialog` "Bagikan notulen ke warga?".
 
+### Verifikasi 2 langkah & sesi
+Layar kode dan pemasangan authenticator memakai `AuthShell` halaman masuk: ubin ikon `ShieldCheck` biru embun, judul `SplitTitle`, kolom kode 6 digit rata tengah bermonospace dengan jarak huruf lebar, galat lewat `Notice` merah. Kode QR selalu di atas kotak putih (`bg-white`, membulat 12px) agar tetap terbaca di tema gelap; kunci manual berupa monospace per 4 karakter dengan tombol Salin. Peringatan keluar otomatis memakai `Modal` + `DialogShell` ikon `Clock` dengan hitung mundur angka tabular dan tombol utama **Tetap masuk**. Komponen: `components/session/` (`TotpEnroll`, `TwoStepCard`, `IdleGuard`), `modules/auth/MfaPages.tsx`.
+
 ### Sheet & Modal
 Sheet masuk dari kanan (0,55 dtk) dengan isi `data-sheet-item` bertahap; Modal `<dialog>` naik 14px (0,35 dtk) dengan field `data-field` bertahap. Kerangka: kepala (ubin ikon + judul + sub + tombol tutup), isi bergulir, kaki abu tipis berisi tombol.
 

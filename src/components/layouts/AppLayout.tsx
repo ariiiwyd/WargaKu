@@ -9,6 +9,7 @@ import { LogoMark, Wordmark } from '@/components/ui/Logo';
 import { Popover } from './Popover';
 import { InstallButton, InstallIconButton } from '@/components/install/InstallApp';
 import { IdleGuard } from '@/components/session/IdleGuard';
+import { MfaChallengePage, MfaEnrollPage } from '@/modules/auth/MfaPages';
 import { navFor, bottomNavFor, type NavItem } from '@/app/navigation';
 import { ROLE_LABEL, roleWithRt } from '@/app/permissions';
 import { useDatabase, useMe, unreadCount } from '@/hooks/useData';
@@ -26,19 +27,27 @@ export function AppLayout() {
   const auth = useAuth((s) => s.status);
   const uid = useAuth((s) => s.userId);
   const recovery = useAuth((s) => s.recovery);
+  const mfa = useAuth((s) => s.mfa);
+  const checkMfa = useAuth((s) => s.checkMfa);
   const status = useDb((s) => s.status);
   const error = useDb((s) => s.error);
   const load = useDb((s) => s.load);
   const clear = useDb((s) => s.clear);
 
   useEffect(() => {
-    if (auth === 'signedIn' && uid) load();
+    if (auth === 'signedIn' && uid && mfa === 'unknown') void checkMfa();
+  }, [auth, uid, mfa, checkMfa]);
+
+  // Data RT baru dimuat setelah syarat verifikasi 2 langkah terpenuhi.
+  const ready = auth === 'signedIn' && !!uid && mfa === 'ok';
+  useEffect(() => {
+    if (ready) load();
     if (auth === 'signedOut') clear();
-  }, [auth, uid, load, clear]);
+  }, [ready, auth, load, clear]);
 
   // Data tetap segar: notifikasi realtime + muat ulang saat aplikasi kembali dibuka.
   useEffect(() => {
-    if (auth !== 'signedIn' || !uid || !supabase) return;
+    if (!ready || !uid || !supabase) return;
     const ch = supabase
       .channel(`notif-${uid}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` }, () => load({ silent: true }))
@@ -49,10 +58,13 @@ export function AppLayout() {
       supabase?.removeChannel(ch);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [auth, uid, load]);
+  }, [ready, uid, load]);
 
   if (recovery) return <Navigate to="/atur-sandi" replace />;
   if (auth === 'unconfigured' || auth === 'signedOut') return <Navigate to="/masuk" replace />;
+  if (auth === 'signedIn' && mfa === 'challenge') return <MfaChallengePage />;
+  if (auth === 'signedIn' && mfa === 'enroll') return <MfaEnrollPage />;
+  if (auth === 'signedIn' && mfa !== 'ok') return <GateScreen loading />;
   if (status === 'error') return <GateScreen title="Data tidak dapat dimuat" text={error ?? ''} retry={() => load()} />;
   if (status === 'no-membership') return <GateScreen title="Akun belum terdaftar di RT" text={error ?? ''} />;
   if (auth === 'loading' || status !== 'ready') return <GateScreen loading />;

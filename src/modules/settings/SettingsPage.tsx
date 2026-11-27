@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, Button, Card, CardHeader, Choice, Field, Input } from '@/components/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/DialogShell';
 import { idleLabel } from '@/lib/session';
+import { TwoStepCard } from '@/components/session/TwoStepCard';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
 import { actions, useDb } from '@/stores/db.store';
@@ -178,6 +179,7 @@ function System() {
           </div>
         </div>
       </Card>
+      <TwoStepCard />
       <Card data-card className="lg:col-span-2">
         <CardHeader title="Sesi & perangkat" icon={MonitorSmartphone} />
         <div className="space-y-3 px-5 pb-5 text-[13.5px] leading-relaxed text-ink-2">

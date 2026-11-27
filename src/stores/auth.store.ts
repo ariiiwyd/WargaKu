@@ -3,6 +3,8 @@ import { friendlyError, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { clearIdle, idleExpired, markActive } from '@/lib/session';
 
 export type AuthStatus = 'unconfigured' | 'loading' | 'signedOut' | 'signedIn';
+/** Verifikasi 2 langkah untuk sesi ini: ok = boleh memuat data; challenge = minta kode; enroll = wajib memasang authenticator. */
+export type MfaStatus = 'unknown' | 'checking' | 'ok' | 'challenge' | 'enroll';
 
 interface AuthState {
   status: AuthStatus;
@@ -12,6 +14,10 @@ interface AuthState {
   recovery: boolean;
   /** Pesan untuk halaman masuk, mis. alasan keluar otomatis */
   notice: string | null;
+  mfa: MfaStatus;
+  /** Tentukan apakah sesi perlu kode 2 langkah sebelum data dimuat. */
+  checkMfa: () => Promise<void>;
+  setMfa: (m: MfaStatus) => void;
   init: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   /** reason diisi bila keluar bukan atas permintaan pengguna (tampil di halaman masuk) */
@@ -33,6 +39,7 @@ export const useAuth = create<AuthState>()((set) => ({
   email: null,
   recovery: typeof window !== 'undefined' && /type=(recovery|invite)/.test(window.location.hash),
   notice: null,
+  mfa: 'unknown',
 
   init: () => {
     if (started || !supabase) return;
@@ -55,6 +62,8 @@ export const useAuth = create<AuthState>()((set) => ({
         userId: u?.id ?? null,
         email: u?.email ?? null,
         recovery: event === 'PASSWORD_RECOVERY' ? true : s.recovery,
+        // Akun berganti / keluar → periksa ulang; kode terverifikasi → sesi aal2.
+        mfa: !u || u.id !== s.userId ? 'unknown' : event === 'MFA_CHALLENGE_VERIFIED' ? 'ok' : s.mfa,
       }));
     });
   },
@@ -70,8 +79,22 @@ export const useAuth = create<AuthState>()((set) => ({
     // scope local: hanya perangkat ini; tetap berhasil walau sesi sudah dicabut di server.
     await supabase?.auth.signOut({ scope: 'local' });
     clearIdle();
-    set({ status: 'signedOut', userId: null, email: null, notice: reason ?? null });
+    set({ status: 'signedOut', userId: null, email: null, notice: reason ?? null, mfa: 'unknown' });
   },
+
+  checkMfa: async () => {
+    if (!supabase) return;
+    set({ mfa: 'checking' });
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel === 'aal2') return set({ mfa: 'ok' });
+    if (aal?.nextLevel === 'aal2') return set({ mfa: 'challenge' });
+    // Belum punya authenticator: wajib untuk Ketua RT & Bendahara (aturan di database).
+    const { data: required, error } = await supabase.rpc('mfa_required');
+    // Bila gagal dicek, lanjutkan; database tetap menolak data tanpa kode untuk peran yang wajib.
+    set({ mfa: !error && required === true ? 'enroll' : 'ok' });
+  },
+
+  setMfa: (mfa) => set({ mfa }),
 
   signOutOthers: async () => {
     if (!supabase) return 'Aplikasi belum terhubung ke Supabase.';

@@ -536,6 +536,28 @@ export const actions = {
     }, 'users.manage');
   },
 
+  /** Ketua RT: status verifikasi 2 langkah tiap anggota (user_id → sudah aktif). */
+  async memberMfaStatus(): Promise<Record<string, boolean>> {
+    const nid = useDb.getState().db?.neighborhood.id;
+    if (!nid) return {};
+    const { data, error } = await sb().rpc('member_mfa_status', { p_neighborhood_id: nid });
+    if (error) return {};
+    return Object.fromEntries(((data ?? []) as { user_id: string; enrolled: boolean }[]).map((r) => [r.user_id, r.enrolled]));
+  },
+
+  /** Ketua RT menghapus authenticator anggota yang kehilangan HP (Edge Function reset-mfa). */
+  resetMemberMfa(userId: string) {
+    return run(async () => {
+      const { data, error } = await sb().functions.invoke('reset-mfa', { body: { userId } });
+      if (error) {
+        const ctx = (error as { context?: Response }).context;
+        const body = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+        throw new Error(body?.error ?? 'Gagal mereset verifikasi 2 langkah.');
+      }
+      return data as { removed: number };
+    }, 'users.manage');
+  },
+
   /* ---------------- Pengaturan ---------------- */
   updateNeighborhood(patch: Partial<Database['neighborhood']>) {
     return run(async ({ nid }) => {
