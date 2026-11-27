@@ -19,10 +19,18 @@ export function useLookups() {
   return useMemo(() => {
     const residents = new Map(db.residents.map((r) => [r.id, r]));
     const households = new Map(db.households.map((h) => [h.id, h]));
+    const houses = new Map(db.houses.map((o) => [o.id, o]));
     const profiles = new Map(db.profiles.map((p) => [p.id, p]));
     return {
       resident: (id: string | null | undefined) => (id ? residents.get(id) : undefined),
       household: (id: string | null | undefined) => (id ? households.get(id) : undefined),
+      house: (id: string | null | undefined) => (id ? houses.get(id) : undefined),
+      /** Label KK untuk daftar pilihan: "23 · KK Arie Wahyudi" */
+      householdLabel: (h: Household | undefined) => {
+        if (!h) return '—';
+        const head = h.head_resident_id ? residents.get(h.head_resident_id)?.full_name : undefined;
+        return `${h.house_number} · KK ${head ?? (h.family_card_number ? '…' + h.family_card_number.slice(-4) : 'tanpa kepala keluarga')}`;
+      },
       profile: (id: string | null | undefined) => (id ? profiles.get(id) : undefined),
       userName: (id: string | null | undefined) => (id ? profiles.get(id)?.full_name ?? 'Sistem' : '—'),
       headOf: (h: Household | undefined) => (h?.head_resident_id ? residents.get(h.head_resident_id) : undefined),

@@ -21,6 +21,7 @@ Stack: React + Vite + TypeScript + Tailwind CSS, Supabase (PostgreSQL, Auth, Sto
    | `supabase/migrations/20261127000700_online_meeting.sql` | Rapat online (tautan Google Meet/Zoom), absensi online, notulen & rekaman |
    | `supabase/migrations/20261127000800_hardening.sql` | Cabut hak eksekusi fungsi trigger internal dari API (temuan Advisors) |
    | `supabase/migrations/20261127000900_patrol_management.sql` | Kelola regu ronda & pembuatan jadwal otomatis |
+   | `supabase/migrations/20261127001000_houses.sql` | Rumah terpisah dari KK (satu rumah beberapa KK), iuran per rumah / per KK |
    | `supabase/seed.sql` | Identitas RT + data master (jenis surat, iuran, kategori kas & pengaduan) |
 
    Atau dengan Supabase CLI: `supabase link --project-ref <ref>` lalu `supabase db push`.

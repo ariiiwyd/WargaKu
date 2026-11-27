@@ -89,7 +89,7 @@ function AdminDashboard({ me }: { me: Actor }) {
       {/* Stat row */}
       <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <Stat icon={Users} tone="blue" label="Total warga aktif" to={can(me.role, 'residents.view') ? '/warga' : undefined}
-          value={<CountUp value={stats.active.length} />} foot={`${new Set(stats.active.map((r) => r.household_id)).size} keluarga`} />
+          value={<CountUp value={stats.active.length} />} foot={`${new Set(stats.active.map((r) => r.household_id)).size} KK · ${db.houses.filter((o) => o.status === 'occupied').length} rumah`} />
         <Stat icon={FileText} tone="violet" label="Surat dalam proses" to="/surat" value={<CountUp value={stats.openLetters.length} />}
           foot={`${db.letters.filter((l) => l.status === 'submitted').length} baru diajukan`} />
         <Stat icon={Wallet} tone="green" label="Saldo kas RT" to={can(me.role, 'cash.view') ? '/iuran?tab=kas' : undefined}

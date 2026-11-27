@@ -7,7 +7,7 @@
  */
 import { sb } from '@/lib/supabase';
 import type {
-  AuditLog, Database, Household, LetterHistory, Membership, Notification, PatrolTeam, Profile, Resident, Role,
+  AuditLog, Database, House, Household, LetterHistory, Membership, Notification, PatrolTeam, Profile, Resident, Role,
 } from '@/types/models';
 
 export class NoMembershipError extends Error {
@@ -71,6 +71,7 @@ export async function loadDatabase(userId: string): Promise<Database> {
   const staff = role !== 'warga';
   const byNid = (t: string, cols = '*') => c.from(t).select(cols).eq('neighborhood_id', nid);
 
+  const housesP = rows(byNid('houses').order('house_number'));
   const [
     nb, settings, names, mems, profs, hhs, residentsFull, residentsDir, rHist, lTypes, letters, lHist, dTypes, invoices,
     payments, cats, cash, pubCash, anns, reads, notifs, cCats, complaints, cUpd, acts, parts, teams, tMembers, sched,
@@ -139,9 +140,13 @@ export async function loadDatabase(userId: string): Promise<Database> {
     joined_at: str(r.joined_at), left_at: (r.left_at as string) ?? null, created_at: str(r.created_at),
   });
 
+  const houses: House[] = (await housesP).map((o) => ({
+    id: str(o.id), house_number: str(o.house_number), address: str(o.address), status: (o.status as House['status']) ?? 'occupied',
+    billing_household_id: (o.billing_household_id as string) ?? null, created_at: str(o.created_at),
+  }));
   const households: Household[] = hhs.map((h) => ({
-    id: str(h.id), house_number: str(h.house_number), address: str(h.address), head_resident_id: (h.head_resident_id as string) ?? null,
-    family_card_number: str(h.family_card_number), status: (h.status as Household['status']) ?? 'active', created_at: str(h.created_at),
+    id: str(h.id), house_id: str(h.house_id), house_number: str(h.house_number), address: str(h.address), head_resident_id: (h.head_resident_id as string) ?? null,
+    family_card_number: str(h.family_card_number), status: h.status === 'inactive' ? 'inactive' : 'active', created_at: str(h.created_at),
   }));
 
   const histBy = new Map<string, LetterHistory[]>();
@@ -167,6 +172,7 @@ export async function loadDatabase(userId: string): Promise<Database> {
     },
     profiles: [...profMap.values()],
     memberships,
+    houses,
     households,
     residents: [...residentMap.values()],
     residentHistory: rHist.map((h) => ({
@@ -181,9 +187,9 @@ export async function loadDatabase(userId: string): Promise<Database> {
       rejection_reason: (l.rejection_reason as string) ?? null, created_by: str(l.created_by), created_at: str(l.created_at),
       completed_at: (l.completed_at as string) ?? (l.approved_at as string) ?? null, history: histBy.get(str(l.id)) ?? [],
     })),
-    duesTypes: dTypes.map((t) => ({ id: str(t.id), name: str(t.name), description: str(t.description), amount: num(t.amount), billing_period: t.billing_period as never, is_active: !!t.is_active })),
+    duesTypes: dTypes.map((t) => ({ id: str(t.id), name: str(t.name), description: str(t.description), amount: num(t.amount), billing_period: t.billing_period as never, billing_unit: t.billing_unit === 'kk' ? 'kk' : 'rumah', is_active: !!t.is_active })),
     invoices: invoices.map((i) => ({
-      id: str(i.id), household_id: str(i.household_id), dues_type_id: str(i.dues_type_id), invoice_number: str(i.invoice_number),
+      id: str(i.id), household_id: str(i.household_id), house_id: (i.house_id as string) ?? null, dues_type_id: str(i.dues_type_id), invoice_number: str(i.invoice_number),
       period_month: (i.period_month as number) ?? null, period_year: num(i.period_year), amount: num(i.amount), paid_amount: num(i.paid_amount),
       status: i.status as never, due_date: str(i.due_date), created_at: str(i.created_at),
     })),

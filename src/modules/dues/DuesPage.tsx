@@ -406,7 +406,7 @@ function CashTab({ onAdd }: { onAdd: (t: 'income' | 'expense') => void }) {
 function TypesTab() {
   const db = useDatabase();
   const toast = useToast();
-  const [edit, setEdit] = useState<{ id?: string; name: string; amount: string; billing_period: string; description: string; is_active: boolean } | null>(null);
+  const [edit, setEdit] = useState<{ id?: string; name: string; amount: string; billing_period: string; billing_unit: 'rumah' | 'kk'; description: string; is_active: boolean } | null>(null);
   const id = useId();
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -426,13 +426,16 @@ function TypesTab() {
                 <p className="text-[15px] font-bold">{t.name}</p>
                 <p className="mt-0.5 text-[13px] text-muted">{t.description}</p>
               </div>
-              <Badge tone={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+              <span className="flex shrink-0 flex-col items-end gap-1.5">
+                <Badge tone={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Aktif' : 'Nonaktif'}</Badge>
+                <Badge tone="blue">{t.billing_unit === 'kk' ? 'Per KK' : 'Per rumah'}</Badge>
+              </span>
             </div>
             <p className="mt-4 text-[22px] font-extrabold">{rupiah(t.amount)} <span className="text-[13px] font-semibold text-muted">/ {t.billing_period}</span></p>
             <Button size="sm" variant="secondary" className="mt-3" onClick={() => setEdit({ ...t, amount: String(t.amount) })}>Ubah</Button>
           </Card>
         ))}
-        <button data-card onClick={() => setEdit({ name: '', amount: '', billing_period: 'bulanan', description: '', is_active: true })} className="grid min-h-[180px] place-items-center rounded-[18px] border-2 border-dashed border-line text-[14px] font-semibold text-muted hover:border-primary hover:text-primary">
+        <button data-card onClick={() => setEdit({ name: '', amount: '', billing_period: 'bulanan', billing_unit: 'rumah', description: '', is_active: true })} className="grid min-h-[180px] place-items-center rounded-[18px] border-2 border-dashed border-line text-[14px] font-semibold text-muted hover:border-primary hover:text-primary">
           <span className="flex flex-col items-center gap-2"><Plus className="size-6" />Tambah jenis iuran</span>
         </button>
       </div>
@@ -451,6 +454,9 @@ function TypesTab() {
                     </Select>
                   </Field>
                 </div>
+                <Field label="Ditagihkan ke" hint={edit.billing_unit === 'kk' ? 'Setiap KK aktif mendapat tagihan sendiri, termasuk KK yang tinggal serumah.' : 'Satu tagihan per rumah, dikirim ke KK penanggung jawab rumah itu.'}>
+                  <Choice name="Ditagihkan ke" value={edit.billing_unit} onChange={(v) => setEdit({ ...edit, billing_unit: v })} options={[{ value: 'rumah', label: 'Per rumah' }, { value: 'kk', label: 'Per KK' }]} />
+                </Field>
                 <Field label="Keterangan"><Input value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></Field>
                 <label className="flex items-center gap-2.5 text-[14px] font-semibold" data-field>
                   <input type="checkbox" checked={edit.is_active} onChange={(e) => setEdit({ ...edit, is_active: e.target.checked })} className="size-4 accent-[var(--primary)]" /> Aktif dan dapat ditagihkan
@@ -480,8 +486,16 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   const t = db.duesTypes.find((x) => x.id === type);
-  const targets = db.households.filter((h) => h.status === 'active');
-  const existing = targets.filter((h) => db.invoices.some((i) => i.household_id === h.id && i.dues_type_id === type && i.period_year === y && (i.period_month ?? 0) === (t?.billing_period === 'bulanan' ? m : 0) && i.status !== 'cancelled')).length;
+  const perHouse = t?.billing_unit !== 'kk';
+  const activeKk = new Set(db.households.filter((h) => h.status === 'active').map((h) => h.id));
+  const occupied = db.houses.filter((o) => o.status === 'occupied');
+  // Per rumah: tagihan ke KK penanggung jawab tiap rumah berpenghuni. Per KK: setiap KK aktif.
+  const targets = perHouse
+    ? db.households.filter((h) => occupied.some((o) => o.billing_household_id === h.id) && activeKk.has(h.id))
+    : db.households.filter((h) => activeKk.has(h.id));
+  const noOwner = perHouse ? occupied.filter((o) => !o.billing_household_id || !activeKk.has(o.billing_household_id)).length : 0;
+  const samePeriod = (i: (typeof db.invoices)[number]) => i.dues_type_id === type && i.period_year === y && (i.period_month ?? 0) === (t?.billing_period === 'bulanan' ? m : 0) && i.status !== 'cancelled';
+  const existing = targets.filter((h) => db.invoices.some((i) => samePeriod(i) && (perHouse ? i.house_id === h.house_id : i.household_id === h.id))).length;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const r = await actions.generateInvoices({ dues_type_id: type, month: t?.billing_period === 'bulanan' ? m : null, year: y, due_date: due, household_ids: targets.map((h) => h.id) });
@@ -492,7 +506,7 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
       <form onSubmit={submit} noValidate>
-        <DialogShell id={id} title="Buat tagihan" sub="Tagihan dibuat untuk setiap rumah berpenghuni. Periode yang sudah ditagih otomatis dilewati." icon={ReceiptText} onClose={onClose}
+        <DialogShell id={id} title="Buat tagihan" sub="Periode yang sudah ditagih otomatis dilewati." icon={ReceiptText} onClose={onClose}
           footer={<><Button type="button" variant="secondary" onClick={onClose}>Batal</Button><Button type="submit">Buat {Math.max(targets.length - existing, 0)} tagihan</Button></>}>
           <div className="space-y-4">
             <Field label="Jenis iuran" required>
@@ -508,7 +522,13 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
             </div>
             <Field label="Jatuh tempo" required><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
             <div className="rounded-xl bg-panel px-4 py-3 text-[13.5px] text-ink-2" data-field>
-              <b className="text-ink">{targets.length}</b> rumah berpenghuni · <b className="text-ink">{existing}</b> sudah memiliki tagihan periode ini
+              {perHouse ? (
+                <><b className="text-ink">{targets.length}</b> rumah berpenghuni (ditagihkan ke KK penanggung jawab)</>
+              ) : (
+                <><b className="text-ink">{targets.length}</b> KK aktif, termasuk KK yang tinggal serumah</>
+              )}
+              {' · '}<b className="text-ink">{existing}</b> sudah memiliki tagihan periode ini
+              {noOwner ? <span className="mt-1 block text-warn-ink">{noOwner} rumah belum punya KK penanggung jawab aktif dan tidak ditagih. Atur di menu Data Keluarga.</span> : null}
             </div>
             {err ? <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-[13.5px] font-medium text-danger-ink">{err}</p> : null}
           </div>

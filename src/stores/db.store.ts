@@ -7,7 +7,7 @@
  */
 import { create } from 'zustand';
 import type {
-  Activity, Announcement, AttendanceStatus, ComplaintPriority, ComplaintStatus, Database, DuesType, GuestLog, Household,
+  Activity, Announcement, AttendanceStatus, ComplaintPriority, ComplaintStatus, Database, DuesType, GuestLog, House, Household,
   PaymentMethod, Resident, Result, Role, SecurityIncident,
 } from '@/types/models';
 import { can, ROLE_LABEL, type Action } from '@/app/permissions';
@@ -127,11 +127,8 @@ export const actions = {
       const created = await q(sb().from('residents').insert({ ...row, neighborhood_id: nid }).select('id').single());
       const id = (created as { id: string }).id;
       const hh = db.households.find((h) => h.id === input.household_id);
-      if (hh && (!hh.head_resident_id || hh.status === 'vacant')) {
-        await q(sb().from('households').update({
-          status: 'active',
-          ...(!hh.head_resident_id && input.family_relationship === 'Kepala Keluarga' ? { head_resident_id: id } : {}),
-        }).eq('id', hh.id));
+      if (hh && !hh.head_resident_id && input.family_relationship === 'Kepala Keluarga') {
+        await q(sb().from('households').update({ head_resident_id: id }).eq('id', hh.id));
       }
       return id;
     }, 'residents.manage');
@@ -146,12 +143,37 @@ export const actions = {
     }, 'residents.manage');
   },
 
-  saveHousehold(input: Partial<Household> & { house_number: string; address: string }) {
-    return run(async ({ nid }) => {
+  /** Rumah baru (opsional langsung dengan KK pertamanya) atau ubah data rumah. */
+  saveHouse(input: Partial<House> & { house_number: string; address: string; first_family_card?: string; with_family?: boolean }) {
+    return run(async ({ db, nid }) => {
       required(input.house_number, 'Nomor rumah');
       required(input.address, 'Alamat');
+      const no = input.house_number.trim();
+      if (db.houses.some((o) => o.house_number.toLowerCase() === no.toLowerCase() && o.id !== input.id)) throw new Error(`Nomor rumah ${no} sudah terdaftar`);
+      const kk = blank(input.first_family_card);
+      if (kk && !/^\d{16}$/.test(kk)) throw new Error('Nomor KK harus 16 digit angka');
+      const row = { house_number: no, address: input.address.trim(), ...(input.status ? { status: input.status } : {}) };
+      if (input.id) {
+        await q(sb().from('houses').update(row).eq('id', input.id));
+        return input.id;
+      }
+      const created = (await q(sb().from('houses').insert({ ...row, neighborhood_id: nid, status: input.with_family ? 'occupied' : 'vacant' }).select('id').single())) as { id: string };
+      if (input.with_family) await q(sb().from('households').insert({ neighborhood_id: nid, house_id: created.id, family_card_number: kk }));
+      return created.id;
+    }, 'households.manage');
+  },
+
+  /** KK yang menanggung iuran per rumah. */
+  setHouseBilling(houseId: string, householdId: string) {
+    return run(() => q(sb().from('houses').update({ billing_household_id: householdId }).eq('id', houseId)), 'households.manage');
+  },
+
+  /** Tambah/ubah KK. Nomor rumah & alamat mengikuti rumahnya (diisi database). */
+  saveHousehold(input: Partial<Household> & { house_id: string }) {
+    return run(async ({ nid }) => {
+      required(input.house_id, 'Rumah');
       if (input.family_card_number && !/^\d{16}$/.test(input.family_card_number)) throw new Error('Nomor KK harus 16 digit angka');
-      const row = { house_number: input.house_number.trim(), address: input.address.trim(), family_card_number: blank(input.family_card_number), status: input.status ?? 'active' };
+      const row = { house_id: input.house_id, family_card_number: blank(input.family_card_number), status: input.status ?? 'active' };
       if (input.id) await q(sb().from('households').update(row).eq('id', input.id));
       else await q(sb().from('households').insert({ ...row, neighborhood_id: nid }));
     }, 'households.manage');
@@ -196,13 +218,14 @@ export const actions = {
     return run(async ({ nid }) => {
       required(input.name, 'Nama iuran');
       if (!(input.amount > 0)) throw new Error('Nominal harus lebih dari 0');
-      const row = { name: input.name.trim(), amount: input.amount, billing_period: input.billing_period, description: blank(input.description), is_active: input.is_active ?? true };
+      const row = { name: input.name.trim(), amount: input.amount, billing_period: input.billing_period, billing_unit: input.billing_unit ?? 'rumah', description: blank(input.description), is_active: input.is_active ?? true };
       if (input.id) await q(sb().from('dues_types').update(row).eq('id', input.id));
       else await q(sb().from('dues_types').insert({ ...row, neighborhood_id: nid }));
     }, 'dues.manage');
   },
 
-  /** create_invoice per keluarga; periode yang sudah ditagih dilewati. */
+  /** create_invoice per KK tujuan; periode yang sudah ditagih dilewati.
+   *  Iuran per rumah: kirim KK penanggung jawab tiap rumah (lihat duesTargets). */
   generateInvoices(input: { dues_type_id: string; month: number | null; year: number; due_date: string; household_ids: string[] }) {
     return run(async ({ db }) => {
       const t = db.duesTypes.find((x) => x.id === input.dues_type_id && x.is_active);
@@ -212,7 +235,8 @@ export const actions = {
       required(input.due_date, 'Jatuh tempo');
       let created = 0, skipped = 0;
       for (const hh of input.household_ids) {
-        const dup = db.invoices.some((i) => i.household_id === hh && i.dues_type_id === t.id && i.period_year === input.year
+        const houseId = db.households.find((h) => h.id === hh)?.house_id;
+        const dup = db.invoices.some((i) => (t.billing_unit === 'rumah' ? i.house_id === houseId : i.household_id === hh) && i.dues_type_id === t.id && i.period_year === input.year
           && (i.period_month ?? 0) === (t.billing_period === 'bulanan' ? input.month ?? 0 : 0) && i.status !== 'cancelled');
         if (dup) { skipped++; continue; }
         const { error } = await sb().rpc('create_invoice', {

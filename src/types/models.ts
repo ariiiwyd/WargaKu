@@ -49,13 +49,26 @@ export interface Membership {
   is_active: boolean;
 }
 
+/** Rumah (alamat fisik). Satu rumah bisa dihuni beberapa KK. */
+export interface House {
+  id: string;
+  house_number: string;
+  address: string;
+  status: 'occupied' | 'vacant' | 'inactive';
+  /** KK yang ditagih untuk iuran per rumah */
+  billing_household_id: string | null;
+  created_at: string;
+}
+
+/** Keluarga (satu Kartu Keluarga). house_number & address disalin otomatis dari rumahnya. */
 export interface Household {
   id: string;
+  house_id: string;
   house_number: string;
   address: string;
   head_resident_id: string | null;
   family_card_number: string;
-  status: 'active' | 'vacant' | 'inactive';
+  status: 'active' | 'inactive';
   created_at: string;
 }
 
@@ -118,12 +131,16 @@ export interface DuesType {
   description: string;
   amount: number;
   billing_period: BillingPeriod;
+  /** rumah = satu tagihan per rumah (ke KK penanggung jawab); kk = setiap KK ditagih */
+  billing_unit: 'rumah' | 'kk';
   is_active: boolean;
 }
 
 export interface Invoice {
   id: string;
   household_id: string;
+  /** terisi untuk iuran per rumah */
+  house_id: string | null;
   dues_type_id: string;
   invoice_number: string;
   period_month: number | null;
@@ -335,6 +352,7 @@ export interface Database {
   neighborhood: Neighborhood;
   profiles: Profile[];
   memberships: Membership[];
+  houses: House[];
   households: Household[];
   residents: Resident[];
   residentHistory: ResidentHistory[];

@@ -204,6 +204,7 @@ const RELATIONS = ['Kepala Keluarga', 'Istri', 'Suami', 'Anak', 'Orang Tua', 'Me
 
 function ResidentForm({ value, onClose }: { value: Partial<Resident> | null; onClose: () => void }) {
   const db = useDatabase();
+  const L = useLookups();
   const toast = useToast();
   const [form, setForm] = useState<Partial<Resident>>({});
   const [err, setErr] = useState('');
@@ -238,13 +239,11 @@ function ResidentForm({ value, onClose }: { value: Partial<Resident> | null; onC
           <Field label="NIK" hint="16 digit, data terbatas" htmlFor="rf-nik">
             <Input id="rf-nik" inputMode="numeric" maxLength={16} value={form.nik ?? ''} onChange={(e) => setForm((f) => ({ ...f, nik: e.target.value.replace(/\D/g, '') }))} />
           </Field>
-          <Field label="Keluarga / rumah" required htmlFor="rf-hh">
+          <Field label="Kartu Keluarga" required htmlFor="rf-hh" hint="Rumah yang dihuni beberapa KK punya pilihan terpisah untuk tiap KK.">
             <Select id="rf-hh" value={form.household_id ?? ''} onChange={set('household_id')}>
               <option value="">Pilih rumah</option>
-              {db.households.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.house_number} — {db.residents.find((r) => r.id === h.head_resident_id)?.full_name ?? 'Kosong'}
-                </option>
+              {db.households.filter((h) => h.status === 'active' || h.id === form.household_id).map((h) => (
+                <option key={h.id} value={h.id}>{L.householdLabel(h)}</option>
               ))}
             </Select>
           </Field>

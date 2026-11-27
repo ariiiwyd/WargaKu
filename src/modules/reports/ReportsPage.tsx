@@ -44,6 +44,7 @@ export function ReportsPage() {
       active, ages, statuses, letters, byCat, income, expense,
       male: active.filter((x) => x.gender === 'L').length, female: active.filter((x) => x.gender === 'P').length,
       households: db.households.filter((h) => h.status === 'active').length,
+      houses: db.houses.filter((o) => o.status === 'occupied').length,
       billed: inv.reduce((s, i) => s + i.amount, 0), collected: inv.reduce((s, i) => s + i.paid_amount, 0),
       attendance,
     };
@@ -52,7 +53,7 @@ export function ReportsPage() {
   const doExport = async () => {
     const sheets: { name: string; rows: Record<string, unknown>[] }[] = [
       { name: 'Statistik Warga', rows: [
-        { Indikator: 'Warga aktif', Nilai: r.active.length }, { Indikator: 'Keluarga/rumah berpenghuni', Nilai: r.households },
+        { Indikator: 'Warga aktif', Nilai: r.active.length }, { Indikator: 'Kartu Keluarga aktif', Nilai: r.households }, { Indikator: 'Rumah berpenghuni', Nilai: r.houses },
         { Indikator: 'Laki-laki', Nilai: r.male }, { Indikator: 'Perempuan', Nilai: r.female },
         ...r.statuses.map((s) => ({ Indikator: `Status ${s.name}`, Nilai: s.value })), ...r.ages.map((a) => ({ Indikator: `Usia ${a.label}`, Nilai: a.value })),
       ] },
@@ -78,7 +79,7 @@ export function ReportsPage() {
         actions={<><Button variant="secondary" icon={Printer} onClick={() => window.print()} className="no-print">Cetak / PDF</Button><Button icon={FileSpreadsheet} onClick={doExport} className="no-print">Ekspor Excel</Button></>} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi icon={Users} label="Warga aktif" value={r.active.length} sub={`${r.households} keluarga`} />
+        <Kpi icon={Users} label="Warga aktif" value={r.active.length} sub={`${r.households} KK · ${r.houses} rumah`} />
         <Kpi icon={FileText} label="Surat diterbitkan" value={db.letters.filter((l) => l.letter_number).length} sub={`${db.letters.length} permohonan`} />
         <Kpi icon={MessageSquareWarning} label="Pengaduan selesai" value={db.complaints.filter((x) => ['resolved', 'closed'].includes(x.status)).length} sub={`dari ${db.complaints.length} laporan`} />
         <Kpi icon={CalendarDays} label="Kegiatan terlaksana" value={db.activities.filter((a) => a.status === 'done').length} sub={`${db.activities.filter((a) => a.status === 'planned').length} dijadwalkan`} />
