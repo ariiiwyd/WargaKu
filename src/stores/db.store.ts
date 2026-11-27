@@ -452,6 +452,28 @@ export const actions = {
       await q(sb().from('security_incidents').update({ status }).eq('id', id));
     }, 'security.manage');
   },
+  /** Simpan regu (baru/ubah) + anggota, lalu buat jadwal 4 minggu ke depan untuk hari jaganya. */
+  savePatrolTeam(input: { id?: string; name: string; weekdays: number[]; leader: string | null; members: string[] }) {
+    return run(async ({ nid }) => {
+      required(input.name, 'Nama regu');
+      if (!input.weekdays.length) throw new Error('Pilih minimal satu hari jaga');
+      if (!input.members.length) throw new Error('Pilih minimal satu anggota regu');
+      if (input.leader && !input.members.includes(input.leader)) throw new Error('Ketua regu harus termasuk anggota regu');
+      const id = await rpc<string>('save_patrol_team', {
+        p_neighborhood_id: nid, p_team_id: input.id ?? null, p_name: input.name.trim(), p_weekdays: [...input.weekdays].sort(),
+        p_leader: input.leader, p_members: input.members,
+      });
+      const created = await rpc<number>('generate_patrol_schedules', { p_neighborhood_id: nid, p_from: null, p_weeks: 4 });
+      return { id, created };
+    }, 'security.manage');
+  },
+  /** Buat jadwal untuk semua regu aktif; mulai dari tanggal tertentu (default hari ini). */
+  generatePatrolSchedules(weeks: number, from?: string) {
+    return run(({ nid }) => rpc<number>('generate_patrol_schedules', { p_neighborhood_id: nid, p_from: from ?? null, p_weeks: weeks }), 'security.manage');
+  },
+  deactivatePatrolTeam(id: string) {
+    return run(() => rpc('deactivate_patrol_team', { p_team_id: id }), 'security.manage');
+  },
   submitPatrolReport(scheduleId: string, status: 'aman' | 'ada_kejadian' | 'tidak_terlaksana', report: string) {
     return run(async ({ nid, me }) => {
       required(report, 'Catatan ronda');

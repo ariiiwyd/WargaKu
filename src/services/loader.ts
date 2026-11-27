@@ -225,7 +225,7 @@ export async function loadDatabase(userId: string): Promise<Database> {
     participants: parts.map((p) => ({ activity_id: str(p.activity_id), resident_id: str(p.resident_id), attendance_status: p.attendance_status as never, registered_at: str(p.registered_at) })),
     patrolTeams: teams.map((t): PatrolTeam => ({
       id: str(t.id), name: str(t.name), leader_resident_id: str(t.leader_resident_id), member_ids: teamMembers.get(str(t.id)) ?? [],
-      weekdays: ((t.weekdays as number[]) ?? []).map(Number),
+      weekdays: ((t.weekdays as number[]) ?? []).map(Number), is_active: t.is_active !== false,
     })),
     patrolSchedules: sched.map((s) => ({ id: str(s.id), team_id: str(s.team_id), patrol_date: str(s.patrol_date), start_time: str(s.start_time).slice(0, 5), end_time: str(s.end_time).slice(0, 5) })),
     patrolReports: reports.map((r) => ({ id: str(r.id), schedule_id: str(r.schedule_id), report: str(r.report), status: r.status as never, submitted_by: str(r.submitted_by), created_at: str(r.created_at) })),

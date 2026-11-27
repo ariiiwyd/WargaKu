@@ -1,17 +1,18 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
-import { BookOpenCheck, Car, CircleCheckBig, DoorOpen, Flashlight, MoonStar, NotebookPen, Plus, ShieldAlert, Siren, UserPlus } from 'lucide-react';
-import { Modal, usePageEnter, useToast } from '@/motion';
+import { BookOpenCheck, CalendarPlus, Car, CircleCheckBig, DoorOpen, Flashlight, MoonStar, NotebookPen, Pencil, Plus, ShieldAlert, Siren, UserPlus, Users } from 'lucide-react';
+import { Modal, Sheet, usePageEnter, useToast } from '@/motion';
 import { PageHeader, Magnetic } from '@/components/ui/PageHeader';
 import { Avatar, Badge, Button, Card, CardHeader, Choice, EmptyState, Field, Input, Select, Textarea, cx } from '@/components/ui/primitives';
-import { DialogShell } from '@/components/ui/DialogShell';
+import { ConfirmDialog, DialogShell } from '@/components/ui/DialogShell';
+import { SearchInput } from '@/components/ui/list';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDatabase, useLookups, useMe } from '@/hooks/useData';
 import { useAct } from '@/hooks/useAct';
 import { actions } from '@/stores/db.store';
 import { can } from '@/app/permissions';
 import { DAYS, dateShort, dateTime, relative, time, todayISO } from '@/lib/format';
-import type { SecurityIncident } from '@/types/models';
+import type { PatrolTeam, SecurityIncident } from '@/types/models';
 
 type TabKey = 'ronda' | 'kejadian' | 'tamu';
 
@@ -36,7 +37,7 @@ export function SecurityPage() {
           {manage ? <Magnetic><Button icon={UserPlus} onClick={() => setGuest(true)}>Catat tamu</Button></Magnetic> : null}
         </>} />
       <div className="mb-5 grid grid-cols-3 gap-3">
-        <Mini icon={MoonStar} label="Regu ronda" value={db.patrolTeams.length} />
+        <Mini icon={MoonStar} label="Regu ronda" value={db.patrolTeams.filter((t) => t.is_active).length} />
         <Mini icon={Siren} label="Kejadian terbuka" value={open} alert={open > 0} />
         <Mini icon={DoorOpen} label="Tamu di lingkungan" value={inside} />
       </div>
@@ -130,26 +131,7 @@ function Patrol() {
           </ul>
         </Card>
       </div>
-      <Card data-card>
-        <CardHeader title="Regu & anggota" icon={MoonStar} />
-        <ul className="space-y-3 px-4 pb-4">
-          {!db.patrolTeams.length ? <li className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-[13px] text-muted">Belum ada regu ronda.</li> : null}
-          {db.patrolTeams.map((t) => (
-            <li key={t.id} className="rounded-2xl border border-line p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[15px] font-bold">{t.name}</p>
-                <Badge tone="blue">{t.weekdays.map((d) => DAYS[d]).join(' & ')}</Badge>
-              </div>
-              <ul className="mt-3 flex flex-wrap gap-1.5">
-                {t.member_ids.map((m) => {
-                  const r = L.resident(m);
-                  return <li key={m} className={cx('inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-[12.5px] font-semibold', m === t.leader_resident_id ? 'bg-primary-soft text-primary-soft-ink' : 'bg-panel text-ink-2')}><Avatar name={r?.full_name ?? '?'} size={22} />{r?.full_name.split(' ').slice(0, 2).join(' ')}{m === t.leader_resident_id ? ' · Ketua' : ''}</li>;
-                })}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <TeamsCard />
       <Modal open={!!rep} onClose={() => setRep(null)} labelledBy={id}>
         <form onSubmit={submit}>
           <DialogShell id={id} title="Laporan ronda" icon={NotebookPen} onClose={() => setRep(null)} footer={<><Button type="button" variant="secondary" onClick={() => setRep(null)}>Batal</Button><Button type="submit">Simpan laporan</Button></>}>
@@ -284,5 +266,217 @@ function GuestForm({ open, onClose }: { open: boolean; onClose: () => void }) {
         </DialogShell>
       </form>
     </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ Regu ronda */
+const DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+function TeamsCard() {
+  const db = useDatabase();
+  const me = useMe()!;
+  const L = useLookups();
+  const toast = useToast();
+  const manage = can(me.role, 'security.manage');
+  const [form, setForm] = useState<PatrolTeam | 'new' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const teams = db.patrolTeams.filter((t) => t.is_active);
+  const today = todayISO();
+  const future = db.patrolSchedules.filter((s) => s.patrol_date >= today).map((s) => s.patrol_date).sort();
+  const lastDate = future[future.length - 1];
+
+  // Perpanjang 4 minggu, mulai sehari setelah jadwal terakhir (atau hari ini bila belum ada).
+  const extend = async () => {
+    setBusy(true);
+    const from = lastDate ? new Date(new Date(lastDate + 'T12:00:00+07:00').getTime() + 86400000).toISOString().slice(0, 10) : undefined;
+    const r = await actions.generatePatrolSchedules(4, from);
+    setBusy(false);
+    if (!r.ok) return toast(r.error, 'error');
+    toast(r.data ? `${r.data} jadwal ronda baru dibuat` : 'Jadwal sudah lengkap untuk periode itu');
+  };
+
+  return (
+    <Card data-card className="flex flex-col">
+      <CardHeader title="Regu & anggota" icon={MoonStar}
+        action={manage && teams.length ? <Button size="sm" variant="soft" icon={Plus} onClick={() => setForm('new')}>Tambah regu</Button> : undefined} />
+      <ul className="space-y-3 px-4 pb-4">
+        {!teams.length ? (
+          <li className="rounded-2xl border border-dashed border-line px-4 py-6 text-center">
+            <p className="text-[14px] font-semibold text-ink">Belum ada regu ronda</p>
+            <p className="mt-1 text-[13px] text-muted">{manage ? 'Buat regu, pilih hari jaga dan anggotanya. Jadwal 4 minggu ke depan dibuat otomatis.' : 'Pengurus akan membuat regu dan jadwal ronda.'}</p>
+            {manage ? <Button className="mt-4" icon={Plus} onClick={() => setForm('new')}>Buat regu pertama</Button> : null}
+          </li>
+        ) : null}
+        {teams.map((t) => (
+          <li key={t.id} className="rounded-2xl border border-line p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-[15px] font-bold">{t.name}</p>
+                <p className="mt-1 flex flex-wrap gap-1">
+                  {[...t.weekdays].sort().map((d) => <Badge key={d} tone="blue">{DAYS[d]}</Badge>)}
+                </p>
+              </div>
+              {manage ? <Button size="sm" variant="ghost" icon={Pencil} aria-label={`Ubah ${t.name}`} onClick={() => setForm(t)} /> : null}
+            </div>
+            <ul className="mt-3 flex flex-wrap gap-1.5">
+              {t.member_ids.map((m) => {
+                const r = L.resident(m);
+                return (
+                  <li key={m} className={cx('inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-[12.5px] font-semibold', m === t.leader_resident_id ? 'bg-primary-soft text-primary-soft-ink' : 'bg-panel text-ink-2')}>
+                    <Avatar name={r?.full_name ?? '?'} size={22} />
+                    {r ? r.full_name.split(' ').slice(0, 2).join(' ') : 'Warga'}
+                    {m === t.leader_resident_id ? ' · Ketua' : ''}
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
+      </ul>
+      {manage && teams.length ? (
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
+          <p className="text-[12.5px] text-muted">{lastDate ? <>Jadwal tersedia sampai <b className="text-ink">{dateShort(lastDate)}</b></> : 'Belum ada jadwal ke depan.'}</p>
+          <Button size="sm" variant="secondary" icon={CalendarPlus} loading={busy} onClick={extend}>{lastDate ? 'Perpanjang 4 minggu' : 'Buat jadwal 4 minggu'}</Button>
+        </div>
+      ) : null}
+      <TeamForm value={form} onClose={() => setForm(null)} />
+    </Card>
+  );
+}
+
+function TeamForm({ value, onClose }: { value: PatrolTeam | 'new' | null; onClose: () => void }) {
+  const db = useDatabase();
+  const L = useLookups();
+  const toast = useToast();
+  const editing = value && value !== 'new' ? value : null;
+  const [name, setName] = useState('');
+  const [days, setDays] = useState<number[]>([]);
+  const [members, setMembers] = useState<string[]>([]);
+  const [leader, setLeader] = useState('');
+  const [q, setQ] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [confirmOff, setConfirmOff] = useState(false);
+
+  useEffect(() => {
+    if (!value) return;
+    setErr('');
+    setQ('');
+    if (value === 'new') {
+      setName(`Regu ${db.patrolTeams.filter((t) => t.is_active).length + 1}`);
+      setDays([]);
+      setMembers([]);
+      setLeader('');
+    } else {
+      setName(value.name);
+      setDays(value.weekdays);
+      setMembers(value.member_ids);
+      setLeader(value.leader_resident_id ?? '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const pool = db.residents
+    .filter((r) => r.is_active)
+    .map((r) => ({ r, house: L.household(r.household_id)?.house_number ?? '' }))
+    .sort((a, b) => a.house.localeCompare(b.house, 'id', { numeric: true }) || a.r.full_name.localeCompare(b.r.full_name));
+  const shown = pool.filter(({ r, house }) => !q.trim() || `${r.full_name} ${house}`.toLowerCase().includes(q.toLowerCase()));
+  const toggleDay = (d: number) => setDays((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]));
+  const toggleMember = (id: string) => {
+    setMembers((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
+    if (leader === id) setLeader('');
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const r = await actions.savePatrolTeam({ id: editing?.id, name, weekdays: days, leader: leader || null, members });
+    setBusy(false);
+    if (!r.ok) return setErr(r.error);
+    toast(r.data.created ? `Regu disimpan · ${r.data.created} jadwal ronda dibuat` : 'Regu disimpan');
+    onClose();
+  };
+  const deactivate = async () => {
+    const r = await actions.deactivatePatrolTeam(editing!.id);
+    if (!r.ok) {
+      toast(r.error, 'error');
+      return false;
+    }
+    toast(`${editing!.name} dinonaktifkan`);
+    setConfirmOff(false);
+    onClose();
+    return true;
+  };
+
+  return (
+    <Sheet open={!!value} onClose={onClose} label={editing ? 'Ubah regu ronda' : 'Tambah regu ronda'} wide>
+      <form onSubmit={submit} className="flex h-full flex-col" noValidate>
+        <div className="border-b border-line px-6 py-4">
+          <h2 className="text-[18px] font-bold">{editing ? 'Ubah regu ronda' : 'Tambah regu ronda'}</h2>
+          <p className="text-[13px] text-muted">Jadwal 4 minggu ke depan dibuat otomatis dari hari jaga. Jadwal yang sudah ada laporannya tidak berubah.</p>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          <Field label="Nama regu" required htmlFor="tf-name">
+            <Input id="tf-name" value={name} onChange={(e) => (setName(e.target.value), setErr(''))} placeholder="Contoh: Regu Melati" />
+          </Field>
+          <div data-sheet-item>
+            <p className="mb-2 text-[13px] font-semibold text-ink-2">Hari jaga <span className="text-danger">*</span></p>
+            <div role="group" aria-label="Hari jaga" className="grid grid-cols-7 gap-1.5">
+              {DAY_SHORT.map((d, i) => {
+                const on = days.includes(i);
+                return (
+                  <button key={d} type="button" aria-pressed={on} aria-label={DAYS[i]} onClick={() => (toggleDay(i), setErr(''))}
+                    className={cx('h-11 rounded-xl border text-[13px] font-semibold transition-colors', on ? 'border-primary bg-primary text-primary-ink' : 'border-line bg-card text-ink-2 hover:border-line-strong')}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div data-sheet-item>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[13px] font-semibold text-ink-2">Anggota <span className="text-danger">*</span></p>
+              <Badge tone={members.length ? 'blue' : 'gray'}><Users className="size-3" />{members.length} dipilih</Badge>
+            </div>
+            <SearchInput value={q} onChange={setQ} placeholder="Cari nama atau nomor rumah" />
+            <ul className="mt-2 max-h-[260px] divide-y divide-line overflow-y-auto rounded-2xl border border-line">
+              {shown.map(({ r, house }) => {
+                const on = members.includes(r.id);
+                return (
+                  <li key={r.id}>
+                    <label className={cx('flex cursor-pointer items-center gap-3 px-3.5 py-2.5', on && 'bg-primary-soft/50')}>
+                      <input type="checkbox" checked={on} onChange={() => (toggleMember(r.id), setErr(''))} className="size-4 accent-[var(--primary)]" />
+                      <Avatar name={r.full_name} size={28} />
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{r.full_name}</span>
+                      <span className="text-[12.5px] text-muted">{house}</span>
+                    </label>
+                  </li>
+                );
+              })}
+              {!shown.length ? (
+                <li className="px-4 py-5 text-center text-[13px] text-muted">{pool.length ? 'Tidak ada warga yang cocok.' : 'Belum ada data warga. Tambahkan warga dulu di menu Data Warga.'}</li>
+              ) : null}
+            </ul>
+          </div>
+          <Field label="Ketua regu" hint="Opsional. Hanya anggota yang dipilih di atas." htmlFor="tf-leader">
+            <Select id="tf-leader" value={leader} onChange={(e) => setLeader(e.target.value)} disabled={!members.length}>
+              <option value="">Tanpa ketua regu</option>
+              {members.map((m) => <option key={m} value={m}>{L.resident(m)?.full_name ?? 'Warga'}</option>)}
+            </Select>
+          </Field>
+          {err ? <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-[13.5px] font-medium text-danger-ink">{err}</p> : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4">
+          {editing ? <Button type="button" variant="ghost" className="mr-auto text-danger-ink" onClick={() => setConfirmOff(true)}>Nonaktifkan regu</Button> : null}
+          <Button type="button" variant="secondary" onClick={onClose}>Batal</Button>
+          <Button type="submit" loading={busy}>{editing ? 'Simpan perubahan' : 'Simpan & buat jadwal'}</Button>
+        </div>
+      </form>
+      {editing ? (
+        <ConfirmDialog open={confirmOff} onClose={() => setConfirmOff(false)} tone="red" title={`Nonaktifkan ${editing.name}?`} confirmLabel="Nonaktifkan"
+          message="Jadwal ronda ke depan untuk regu ini dihapus. Laporan ronda yang sudah ada tetap tersimpan."
+          onConfirm={deactivate} />
+      ) : null}
+    </Sheet>
   );
 }

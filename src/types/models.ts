@@ -263,6 +263,7 @@ export interface PatrolTeam {
   leader_resident_id: string;
   member_ids: string[];
   weekdays: number[]; // 0 = Minggu
+  is_active: boolean;
 }
 
 export interface PatrolSchedule {
